@@ -6,7 +6,7 @@ authors = ["Yuliia Chorna", "Mykhailo Rozhkov", "Paul Kravchenko"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 # web framework
 fastapi = "^0.111.0"
 # web server

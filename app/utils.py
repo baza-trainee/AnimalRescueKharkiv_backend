@@ -18,7 +18,7 @@ def find_attribute_by_name_recursively(module: str, attribute_name: str, match_m
     """..."""
     attributes = []
     for loader, module_name, is_pkg in pkgutil.walk_packages(module.__path__):
-        submodule = loader.find_module(module_name).load_module(module_name)
+        submodule = loader.find_spec(module_name, module.__path__).loader.load_module(module_name)
         if is_pkg:
             attributes += find_attribute_by_name_recursively(submodule, attribute_name, match_module_name)
         elif not match_module_name or module_name == match_module_name:
@@ -34,7 +34,7 @@ def find_attribute_by_type_recursively(module: str, attribute_type: type, match_
     """..."""
     attributes = []
     for loader, module_name, is_pkg in pkgutil.walk_packages(module.__path__):
-        submodule = loader.find_module(module_name).load_module(module_name)
+        submodule = loader.find_spec(module_name, module.__path__).loader.load_module(module_name)
         if is_pkg:
             attributes += find_attribute_by_type_recursively(submodule, attribute_type, match_module_name)
         elif not match_module_name or module_name == match_module_name:
