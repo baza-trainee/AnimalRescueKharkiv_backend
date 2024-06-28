@@ -7,9 +7,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+# web framework
 fastapi = "^0.111.0"
+# web server
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
+# orm
 sqlalchemy = "^2.0.30"
+# migrations
 alembic = "^1.13.1"
 pydantic-extra-types = "^2.7.0"
 phonenumbers = "^8.13.36"
@@ -25,6 +29,74 @@ aioredis = "^2.0.1"
 redis-lru = "^0.1.2"
 asyncpg = "^0.29.0"
 
+[tool.poetry.group.dev.dependencies]
+# pre-commit linters and formatters
+pre-commit = "^3.7.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint]
+extend-select = [
+    "ALL",
+]
+
+extend-ignore = [
+    # Missing type annotation for self and cls.
+    "ANN1",
+    # f-strings to format logging messages.
+    "G004",
+    # Consider {expression} instead of string join.
+    "FLY002",
+    # Type alias {name} uses TypeAlias annotation instead of the type keyword
+    "UP040",
+    # TODOs
+    # Author.
+    "TD002",
+    # Link to issue
+    "TD003",
+    # Line contains a TODO or related comment
+    "FIX",
+    # Args and kwargs are not used and not annotated
+    "ANN002",
+    "ANN003",
+    #
+    "ERA001",
+    # Unused import.
+    "F401",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in public module
+    "D100",
+    # Do not perform function call `Depends` in argument defaults;
+    "B008",
+    # `datetime.datetime.now()` called without a `tz` argument
+    "DTZ005",
+    # Abstract `raise` to an inner function
+    "TRY301",
+    # Do not catch blind exception: `Exception`
+    "BLE001",
+    # Use `logging.exception` instead of `logging.error`
+    "TRY400",
+    # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+    "B904",
+    # Possible binding to all interfaces,
+    "S104",
+    # Missing `from __future__ import annotations`, but uses `typing.Union`
+    "FA100",
+    # File `` is part of an implicit namespace package. Add an `__init__.py`.
+    "INP001",
+    # First line should end with a period, question mark, or exclamation point
+    "D415",
+    # Missing `from __future__ import annotations`, but uses PEP 604 union
+    "FA102",
+    # 1 blank line required between summary line and description
+    "D205",
+]
