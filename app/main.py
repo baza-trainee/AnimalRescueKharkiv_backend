@@ -22,13 +22,17 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 
 origins = settings.cors_origins.split("|")
 
+def __init_routes(initialized_app: FastAPI) -> None:
+    for router in get_app_routers():
+        initialized_app.include_router(router, prefix="/api")
 
 @asynccontextmanager
-async def lifespan(test: FastAPI) -> AsyncGenerator[None, Any]: #noqa: ARG001
+async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     """..."""
     #startup initialization goes here
     logger.info("FastAPI applicaiton started...")
     await FastAPILimiter.init(redis_client_async)
+    __init_routes(initialized_app=initialized_app)
     yield
     #shutdown logic goes here
     await SessionLocal.close_all()
@@ -42,7 +46,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -79,11 +83,6 @@ async def healthchecker(db: AsyncSession = Depends(get_db)) -> dict:
         add_log = f"\n000:\t{datetime.now()}\tError connecting to the database.: {e}\t{function_name}"
         logger.error(add_log)
         raise HTTPException(status_code=500, detail="Database is not configured properly.")
-
-
-
-for router in get_app_routers():
-    app.include_router(router, prefix="/api")
 
 
 if __name__ == "__main__":
