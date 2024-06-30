@@ -1,10 +1,12 @@
 import uuid
-from sqlalchemy.orm import relationship, Mapped, mapped_column, backref, declarative_base
+
+from sqlalchemy import UUID, Boolean, Column, Date, Integer, LargeBinary, String, func
+from sqlalchemy.orm import Mapped, backref, declarative_base, mapped_column, relationship
+from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import DateTime
-from sqlalchemy import UUID, Column, Integer, LargeBinary, String, Date, Boolean, func
 
-Base = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 class Blob(Base):
     __tablename__ = "blobs"
@@ -15,7 +17,7 @@ class Blob(Base):
 
 class MediaAsset(Base):
     __tablename__ = "media_assets"
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)    
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
     blob_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False)
     extension: Mapped[str] = mapped_column(String(10), nullable=False)
     content_type: Mapped[str] = mapped_column(String(30), nullable=False)
