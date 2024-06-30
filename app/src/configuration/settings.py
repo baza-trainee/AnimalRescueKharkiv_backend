@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     cors_origins: str
     rate_limiter_times: int
     rate_limiter_seconds: int
-    blob_chunk_size: str = "10MB"  
-    media_cache_size: str = "400MB"      
+    blob_chunk_size: str = "10MB"
+    media_cache_size: str = "400MB"
     media_cache_record_limit: str = "20MB"
     blob_chunk_size_bytes: int = 10*1024*1024
     media_cache_size_bytes: int = 400*1024*1024
@@ -33,7 +33,8 @@ class Settings(BaseSettings):
                               env_file_encoding = "utf-8")
 
     @property
-    def rate_limiter_description(self) -> str: 
-        f"No more than {self.rate_limiter_times} requests per {self.rate_limiter_seconds} seconds"
+    def rate_limiter_description(self) -> str:
+        """Property returns pre-formatted description for rate limitter middleware injection"""
+        return f"No more than {self.rate_limiter_times} requests per {self.rate_limiter_seconds} seconds"
 
 settings = Settings()
