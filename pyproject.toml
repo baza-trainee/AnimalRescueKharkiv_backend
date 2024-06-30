@@ -29,6 +29,7 @@ redis-lru = "^0.1.2"
 asyncpg = "^0.29.0"
 types-redis = "^4.6.0.20240425"
 redis = "^5.0.7"
+humanfriendly = "^10.0"
 
 [tool.poetry.group.dev.dependencies]
 # pre-commit linters and formatters
