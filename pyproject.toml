@@ -22,13 +22,13 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 python-multipart = "^0.0.9"
 fastapi-mail = "^1.4.1"
-redis = "^5.0.4"
 pydantic-settings = "^2.2.1"
 fastapi-limiter = "^0.1.6"
 aioredis = "^2.0.1"
 redis-lru = "^0.1.2"
 asyncpg = "^0.29.0"
 types-redis = "^4.6.0.20240425"
+redis = "^5.0.7"
 
 [tool.poetry.group.dev.dependencies]
 # pre-commit linters and formatters
