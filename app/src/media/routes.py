@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import Annotated, List
+from typing import TYPE_CHECKING, Annotated, List
 
 import uvicorn
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
@@ -12,9 +12,13 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
-from src.media.models import Blob, MediaAsset
 from src.media.repository import media_repository
-from src.media.schemas import MediaAssetInfo, MediaAssetResponse
+from src.media.schemas import MediaAssetResponse
+
+if TYPE_CHECKING:
+    import io
+
+    from src.media.models import MediaAsset
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix="/media", tags=["media"])
@@ -22,22 +26,12 @@ router = APIRouter(prefix="/media", tags=["media"])
 @router.get("/{media_id}")
 async def read_media(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
-                        # current_user: User = Depends(auth_service.get_current_user),
-                        # authorization: authorization_service = Depends(authorization_service(
-                        #             [
-                        #                 access_rule(Operation.read, [Role.user, Role.moderator, Role.admin])
-                        #             ]
-                        #         ).authorize)
                     ) -> StreamingResponse:
     """Retrieves media asset's binary stream by its unique identifier. Returns StreamingResponse"""
-    media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
+    media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
-    # permissions = authorization.check_entity_permissions(photo.user)
-    # if not permissions[0]:
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-    #       detail=f"You don't have permissions for {', '.join(permissions[1])} operation")
-    media_stream = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
+    media_stream: io.BytesIO = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
     if media_stream is None or not media_stream.seekable():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media blob data not found")
     return StreamingResponse(content=media_stream, media_type=media_asset.content_type)
@@ -49,15 +43,9 @@ async def read_media(media_id: uuid.UUID,
                                               seconds=settings.rate_limiter_seconds))])
 async def read_media_asset(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
-                        # current_user: User = Depends(auth_service.get_current_user),
-                        # authorization: authorization_service = Depends(authorization_service(
-                        #             [
-                        #                 access_rule(Operation.read, [Role.user, Role.moderator, Role.admin])
-                        #             ]
-                        #         ).authorize)
                     ) -> MediaAssetResponse:
     """Retrieves a single media asset by its unique identifier. Returns media asset information"""
-    media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
+    media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
     return media_asset
@@ -75,15 +63,9 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
                         skip: int = Query(default=0, ge=0, description="Records to skip in response"),
                         limit: int = Query(default=20, ge=1, le=50, description="Records per response to show"),
                         db: AsyncSession = Depends(get_db),
-                        # current_user: User = Depends(auth_service.get_current_user),
-                        # authorization: authorization_service = Depends(authorization_service(
-                        #             [
-                        #                 access_rule(Operation.read, [Role.user, Role.moderator, Role.admin])
-                        #             ]
-                        #         ).authorize)
                     ) -> List[MediaAssetResponse]:
     """Retrieves multiple media assets, allows multiple filters. Returns list of media asset information objects"""
-    media_assets = await media_repository.read_media_assets(from_date=from_date,
+    media_assets: List[MediaAsset] = await media_repository.read_media_assets(from_date=from_date,
                                                             to_date=to_date,
                                                             media_type=media_type,
                                                             extension = extension,
@@ -101,20 +83,10 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
                                               seconds=settings.rate_limiter_seconds))])
 async def create_media_asset(file: UploadFile = File(),
                         db: AsyncSession = Depends(get_db),
-                        # current_user: User = Depends(auth_service.get_current_user),
-                        # authorization: authorization_service = Depends(authorization_service(
-                        #             [
-                        #                 access_rule(Operation.create, [Role.user, Role.moderator, Role.admin])
-                        #             ]
-                        #         ).authorize)
                     ) -> MediaAssetResponse:
     """Creates a new media asset from the uploaded media file. Returns media response object"""
-    media_asset = None
+    media_asset: MediaAsset = None
     try:
-        # permissions = authorization.check_entity_permissions()
-        # if not permissions[0]:
-        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-        #       detail=f"You don't have permissions for {', '.join(permissions[1])} operation")
         media_asset = await media_repository.create_media_asset(file=file, db=db)
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
@@ -127,20 +99,9 @@ async def create_media_asset(file: UploadFile = File(),
                                               seconds=settings.rate_limiter_seconds))])
 async def remove_media_asset(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
-                        # current_user: User = Depends(auth_service.get_current_user),
-                        # authorization: authorization_service = Depends(authorization_service(
-                        #             [
-                        #                 access_rule(Operation.read, [Role.user, Role.moderator, Role.admin]),
-                        #                 access_rule(Operation.delete, [Role.admin])
-                        #             ]
-                        #         ).authorize)
                     ) -> None:
     """Deleted a media asset by its unique identifier"""
-    media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
+    media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
-    # permissions = authorization.check_entity_permissions(photo.user)
-    # if not permissions[0]:
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-    #       detail=f"You don't have permissions for {', '.join(permissions[1])} operation")
     media_asset = await media_repository.remove_media_asset(media_asset=media_asset, db=db)
