@@ -108,5 +108,7 @@ extend-ignore = [
     # 1 blank line required between summary line and description
     "D205",
     # Missing docstring in public class
-    "D101"
+    "D101",
+    # Too many arguments in function definition
+    "PLR0913"
 ]
