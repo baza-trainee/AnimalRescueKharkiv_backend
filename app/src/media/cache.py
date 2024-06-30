@@ -6,7 +6,6 @@ from typing import Dict, List
 
 @dataclass
 class MediaCacheRecord:
-    """Type for a meria cache record wrapper to store bytes with timestamp"""
     key: uuid.UUID
     value: bytes
     timestamp: float
@@ -17,7 +16,6 @@ class MediaCacheRecord:
         return len(self.value)
 
 class MediaCache:
-    """Media cache type that stores MediaCacheRecord objects"""
     def __init__(self, media_cache_size: int, media_cache_record_limit:int) -> None:
         """Initializes an instance of MediaCache with specified size and limit for cache records"""
         self.media_cache_size = media_cache_size
