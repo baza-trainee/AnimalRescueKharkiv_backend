@@ -1,5 +1,4 @@
 # mypy: ignore-errors
-import redis
 import redis.asyncio as redis_async
 from src.configuration.settings import settings
 

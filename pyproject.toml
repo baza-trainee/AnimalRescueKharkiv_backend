@@ -28,11 +28,15 @@ fastapi-limiter = "^0.1.6"
 aioredis = "^2.0.1"
 redis-lru = "^0.1.2"
 asyncpg = "^0.29.0"
+types-redis = "^4.6.0.20240425"
 
 [tool.poetry.group.dev.dependencies]
 # pre-commit linters and formatters
 pre-commit = "^3.7.1"
 
+
+[tool.poetry.group.types.dependencies]
+types-redis = "^4.6.0.20240425"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
