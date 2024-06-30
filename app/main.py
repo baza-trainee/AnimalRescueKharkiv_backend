@@ -1,12 +1,11 @@
-# mypy: ignore-errors
 import logging
 import os
 import signal
 import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any, AsyncGenerator
 
-import redis.asyncio as redis
 import uvicorn
 import uvicorn.logging
 from fastapi import Depends, FastAPI, HTTPException
@@ -25,7 +24,7 @@ origins = settings.cors_origins.split("|")
 
 
 @asynccontextmanager
-async def lifespan(test: FastAPI): # noqa: ANN201, ARG001
+async def lifespan(test: FastAPI) -> AsyncGenerator[None, Any]: #noqa: ARG001
     """..."""
     #startup initialization goes here
     logger.info("FastAPI applicaiton started...")
