@@ -78,7 +78,7 @@ repos:
     hooks:
       - id: ruff
         #        # Run the linter in safe changes mode.
-        args: [--fix]
+        args: [--fix, --extend-exclude=migrations, --extend-ignore=D101]
       # - id: ruff
       # Run the linter with unsafe fixes.
       #   args: [--fix, --unsafe-fixes]

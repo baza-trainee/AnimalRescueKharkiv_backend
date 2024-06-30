@@ -44,6 +44,10 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 line-length = 120
 
+extend-exclude = [
+    "migrations",
+]
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
@@ -103,4 +107,6 @@ extend-ignore = [
     "FA102",
     # 1 blank line required between summary line and description
     "D205",
+    # Missing docstring in public class
+    "D101"
 ]
