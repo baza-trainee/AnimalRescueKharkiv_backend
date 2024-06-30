@@ -1,5 +1,5 @@
 import pkgutil
-from importlib.abc import MetaPathFinder
+from importlib.machinery import FileFinder
 from types import ModuleType
 from typing import Any, List
 
@@ -22,8 +22,8 @@ def find_attribute_by_name_recursively(module: ModuleType,
     """..."""
     attributes:List[Any] = []
     for loader, module_name, is_pkg in pkgutil.walk_packages(module.__path__):
-        if isinstance(loader, MetaPathFinder):
-            module_spec = loader.find_spec(module_name, module.__path__)
+        if isinstance(loader, FileFinder):
+            module_spec = loader.find_spec(module_name)
             if module_spec and module_spec.loader:
                 submodule = module_spec.loader.load_module(module_name)
                 if is_pkg:
@@ -43,8 +43,8 @@ def find_attribute_by_type_recursively(module: ModuleType,
     """..."""
     attributes:List[Any] = []
     for loader, module_name, is_pkg in pkgutil.walk_packages(module.__path__):
-        if isinstance(loader, MetaPathFinder):
-            module_spec = loader.find_spec(module_name, module.__path__)
+        if isinstance(loader, FileFinder):
+            module_spec = loader.find_spec(module_name)
             if module_spec and module_spec.loader:
                 submodule = module_spec.loader.load_module(module_name)
                 if is_pkg:
