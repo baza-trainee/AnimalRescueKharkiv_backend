@@ -12,7 +12,6 @@ from sqlalchemy.future import select
 from src.configuration.settings import settings
 from src.media.cache import MediaCache
 from src.media.models import Blob, MediaAsset
-from src.media.schemas import MediaAssetInfo
 from src.singleton import SingletonMeta
 
 logger = logging.getLogger(uvicorn.logging.__name__)
