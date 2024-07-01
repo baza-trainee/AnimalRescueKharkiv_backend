@@ -8,8 +8,8 @@ from fastapi import APIRouter
 
 
 def get_app_models() -> list:
-    """..."""
-    app_models = find_attribute_recursively(
+    """Get all sqlalchemy models' metadata from nested modules"""
+    app_models = find_attributes_recursively(
         module=src,
         attribute_name="Base",
         match_module_name="models",
@@ -17,18 +17,18 @@ def get_app_models() -> list:
     return [model.metadata for model in app_models]
 
 def get_app_routers() -> list:
-    """..."""
-    return list(find_attribute_recursively(
+    """Get all application routers from nested modules"""
+    return list(find_attributes_recursively(
         module=src,
         attribute_type=APIRouter,
         match_module_name="routes",
     ).values())
 
-def find_attribute_recursively(module: ModuleType,
+def find_attributes_recursively(module: ModuleType,
                     attribute_name: str|None = None,
                     attribute_type: type|None = None,
                     match_module_name: str|None = None) -> Dict[int, Any]:
-    """..."""
+    """Recursively loops through modules to find global attributes by name and/or type"""
     attributes:Dict[int,Any] = {}
     for loader, module_name, is_pkg in pkgutil.walk_packages(module.__path__):
         if isinstance(loader, FileFinder):
@@ -37,7 +37,7 @@ def find_attribute_recursively(module: ModuleType,
                 submodule = module_spec.loader.load_module(module_name)
                 if is_pkg:
                     attributes.update(
-                        find_attribute_recursively(submodule,
+                        find_attributes_recursively(submodule,
                                                    attribute_name,
                                                    attribute_type,
                                                    match_module_name))
