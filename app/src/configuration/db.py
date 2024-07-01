@@ -1,6 +1,6 @@
-# mypy: ignore-errors
-import redis
-import redis.asyncio as redis_async
+
+from typing import Any, AsyncGenerator
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.configuration.settings import settings
 
@@ -10,7 +10,7 @@ engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = async_sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
 # Dependency
-async def get_db(): # noqa: ANN201
+async def get_db() -> AsyncGenerator[Any, Any]:
     """..."""
     db = SessionLocal()
     try:
