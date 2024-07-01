@@ -1,7 +1,7 @@
 import pkgutil
 from importlib.machinery import FileFinder
 from types import ModuleType
-from typing import Any, Dict, ValuesView
+from typing import Any, Dict
 
 import src
 from fastapi import APIRouter
