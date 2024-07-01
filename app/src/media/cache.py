@@ -47,6 +47,17 @@ class MediaCache:
             return record.value
         return None
 
+    def delete(self, key: uuid.UUID) -> None:
+        """Deletes byte value from the cache by the passed key"""
+        if key in self.__cache:
+            record = self.__cache.pop(key)
+            if record.timestamp in self.__cache_index:
+                index_record = self.__cache_index[record.timestamp]
+                if len(index_record) > 1:
+                    index_record.remove(key)
+                else:
+                    self.__cache_index.pop(record.timestamp)
+
     def __add(self, new_record: MediaCacheRecord) -> None:
         self.__cache[new_record.key] = new_record
         self.__current_size += new_record.size
