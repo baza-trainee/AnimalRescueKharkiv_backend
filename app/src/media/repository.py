@@ -13,10 +13,11 @@ from src.configuration.settings import settings
 from src.media.cache import MediaCache
 from src.media.models import Blob, MediaAsset
 from src.media.schemas import MediaAssetInfo
+from src.singleton import SingletonMeta
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
-class MediaRepository:
+class MediaRepository (metaclass=SingletonMeta):
     def __init__(self, media_cache: MediaCache) -> None:
         """Initializes an instance of MediaRepository type"""
         self.__media_cache = media_cache
