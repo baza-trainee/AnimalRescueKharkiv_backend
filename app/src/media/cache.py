@@ -1,8 +1,12 @@
+import logging
 import uuid
 from dataclasses import dataclass
 from time import time
 from typing import Dict, List
 
+import uvicorn
+
+logger = logging.getLogger(uvicorn.logging.__name__)
 
 @dataclass
 class MediaCacheRecord:
@@ -33,18 +37,24 @@ class MediaCache:
                 value=value,
                 timestamp=time(),
             )
-            if new_record.size <= self.media_cache_record_limit:
+            if (new_record.size <= self.media_cache_record_limit
+                and new_record.size <= self.media_cache_size):
                 num = 0
-                while new_record.size + self.__current_size > self.media_cache_size:
-                    self.__scavange_cache(num)
+                while (new_record.size + self.__current_size > self.media_cache_size
+                       and num <= self.__full_cleanup_scavanging_level):
+                    logger.debug(f"Media Cache: Scavenging with level {num} executed")
+                    self.__scavenge_cache(num)
                     num += 1
                 self.__add(new_record=new_record)
+                logger.debug(f"Media Cache: New record for {key} added")
 
     def get(self, key:uuid.UUID) -> bytes | None:
         """Gets byte value from the cache by the passed key"""
         if key in self.__cache:
             record:MediaCacheRecord = self.__cache[key]
+            logger.debug(f"Media Cache: HIT - record for {key} found")
             return record.value
+        logger.debug(f"Redis Cache: MISS - no record for {key} found")
         return None
 
     def delete(self, key: uuid.UUID) -> None:
@@ -65,7 +75,7 @@ class MediaCache:
             self.__cache_index[new_record.timestamp] = []
         self.__cache_index[new_record.timestamp].append(new_record.key)
 
-    def __scavange_cache(self, level: int = 0) -> None:
+    def __scavenge_cache(self, level: int = 0) -> None:
         timestamps:list[float] = list(self.__cache_index.keys())
         timestamps.sort()
         count = len(timestamps)
