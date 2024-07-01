@@ -61,6 +61,7 @@ class MediaRepository:
             for blob in blobs:
                 await db.delete(blob)
             await db.commit()
+            self.__media_cache.delete(blob_id)
         except Exception:
             return False
         return True
