@@ -5,6 +5,7 @@ from time import time
 from typing import Dict, List
 
 import uvicorn
+from src.singleton import SingletonMeta
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
@@ -19,11 +20,13 @@ class MediaCacheRecord:
         """Retrun size of the record's bytes value"""
         return len(self.value)
 
-class MediaCache:
+class MediaCache(metaclass=SingletonMeta):
     def __init__(self, media_cache_size: int, media_cache_record_limit:int) -> None:
         """Initializes an instance of MediaCache with specified size and limit for cache records"""
         self.media_cache_size = media_cache_size
         self.media_cache_record_limit = media_cache_record_limit
+        logger.info(f"Cache created: 'MediaCache' (max size: {self.media_cache_size},"
+                    f" record size limit: {self.media_cache_record_limit}) ")
         self.__cache: Dict[uuid.UUID, MediaCacheRecord] = {}
         self.__cache_index: Dict[float, List[uuid.UUID]] = {}
         self.__current_size = 0
