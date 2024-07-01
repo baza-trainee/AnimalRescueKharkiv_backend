@@ -1,40 +1,43 @@
-from datetime import datetime
+import logging
 import os
 import signal
 import traceback
-import uvicorn
-import logging
-
-from fastapi import Depends, FastAPI, HTTPException
 from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Any, AsyncGenerator
 
+import uvicorn
 import uvicorn.logging
-import redis.asyncio as redis
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi_limiter import FastAPILimiter
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from fastapi_limiter import FastAPILimiter
-from fastapi.middleware.cors import CORSMiddleware
-from src.configuration.settings import settings
-from src.configuration.db import engine, SessionLocal, get_db
+from src.configuration.db import SessionLocal, engine, get_db
 from src.configuration.redis import redis_client_async
+from src.configuration.settings import settings
 from utils import get_app_routers
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
-origins = settings.cors_origins.split('|')
+origins = settings.cors_origins.split("|")
 
+def __init_routes(initialized_app: FastAPI) -> None:
+    for router in get_app_routers():
+        initialized_app.include_router(router, prefix="/api")
 
 @asynccontextmanager
-async def lifespan(test: FastAPI):
-    #startup initialization goes here    
+async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
+    """..."""
+    #startup initialization goes here
     logger.info("FastAPI applicaiton started...")
     await FastAPILimiter.init(redis_client_async)
+    __init_routes(initialized_app=initialized_app)
     yield
-    #shutdown logic goes here    
+    #shutdown logic goes here
     await SessionLocal.close_all()
     await engine.dispose()
-    await redis_client_async.close(True)
+    await redis_client_async.close(close_connection_pool=True)
     await FastAPILimiter.close()
     logger.info("FastAPI application shutdown")
 
@@ -43,7 +46,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,43 +54,40 @@ app.add_middleware(
 
 
 @app.get("/")
-def read_root():
+def read_root() -> dict:
+    """..."""
     return {"message": "Welcome!"}
 
 
-@app.get('/api/healthcheck')
+@app.get("/api/healthcheck")
 async def healthchecker(db: AsyncSession = Depends(get_db)) -> dict:
+    """..."""
     try:
         # Make request
-        result = await db.execute(text('SELECT 1'))
+        result = await db.execute(text("SELECT 1"))
         result = result.fetchone()
         if result is None:
             function_name = traceback.extract_stack(None, 2)[1][2]
-            add_log = f'\n500:\t{datetime.now()}\tError connecting to the database.\t{function_name}'
+            add_log = f"\n500:\t{datetime.now()}\tError connecting to the database.\t{function_name}"
             logger.error(add_log)
             raise HTTPException(status_code=500, detail="Database is not configured properly.")
 
         function_name = traceback.extract_stack(None, 2)[1][2]
-        add_log = f'\n000:\t{datetime.now()}\tService is healthy and running\t{function_name}'
+        add_log = f"\n000:\t{datetime.now()}\tService is healthy and running\t{function_name}"
         logger.info(add_log)
 
-        return {'message': "Service is healthy and running"}
+        return {"message": "Service is healthy and running"} # noqa: TRY300
 
     except Exception as e:
         function_name = traceback.extract_stack(None, 2)[1][2]
-        add_log = f'\n000:\t{datetime.now()}\tError connecting to the database.: {e}\t{function_name}'
+        add_log = f"\n000:\t{datetime.now()}\tError connecting to the database.: {e}\t{function_name}"
         logger.error(add_log)
         raise HTTPException(status_code=500, detail="Database is not configured properly.")
-    
 
 
-for router in get_app_routers():
-    app.include_router(router, prefix='/api')     
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
-        uvicorn.run("main:app", host='0.0.0.0', port=8000, reload=True)
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
     except KeyboardInterrupt:
         os.kill(os.getpid(), signal.SIGBREAK)
-        os.kill(os.getpid(), signal.SIGTERM) 
+        os.kill(os.getpid(), signal.SIGTERM)

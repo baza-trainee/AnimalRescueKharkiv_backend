@@ -45,7 +45,6 @@ python main.py
 
 ### Authentication
 
-
 ## Developed by:
 
 - [Yuliia Chorna](https://github.com/YuliiaChorna1)
