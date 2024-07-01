@@ -1,9 +1,11 @@
 import base64
 import io
+import logging
 import uuid
 from datetime import datetime
 from typing import BinaryIO
 
+import uvicorn
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -12,6 +14,7 @@ from src.media.cache import MediaCache
 from src.media.models import Blob, MediaAsset
 from src.media.schemas import MediaAssetInfo
 
+logger = logging.getLogger(uvicorn.logging.__name__)
 
 class MediaRepository:
     def __init__(self, media_cache: MediaCache) -> None:
