@@ -8,6 +8,7 @@ env_file = Path(__file__).parent.parent.parent.parent / ".env"
 
 class Settings(BaseSettings):
     """..."""
+    api_prefix: str = ""
     sqlalchemy_database_url: str
     secret_key: str
     algorithm: str
