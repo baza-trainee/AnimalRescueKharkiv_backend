@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Annotated, List
 import uvicorn
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from fastapi_limiter.depends import RateLimiter
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +16,6 @@ from src.media.repository import media_repository
 from src.media.schemas import MediaAssetResponse
 
 if TYPE_CHECKING:
-    import io
-
     from src.media.models import MediaAsset
 
 logger = logging.getLogger(uvicorn.logging.__name__)
@@ -26,15 +24,15 @@ router = APIRouter(prefix="/media", tags=["media"])
 @router.get("/{media_id}")
 async def read_media(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
-                    ) -> StreamingResponse:
-    """Retrieves media asset's binary stream by its unique identifier. Returns StreamingResponse"""
+                    ) -> Response:
+    """Retrieves media asset's binary stream by its unique identifier. Returns Response with media content"""
     media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
-    media_stream: io.BytesIO = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
-    if media_stream is None or not media_stream.seekable():
+    media_bytes: bytes = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
+    if media_bytes is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media blob data not found")
-    return StreamingResponse(content=media_stream, media_type=media_asset.content_type)
+    return Response(content=media_bytes, media_type=media_asset.content_type)
 
 
 @router.get("/asset/{media_id}",  response_model=MediaAssetResponse,
