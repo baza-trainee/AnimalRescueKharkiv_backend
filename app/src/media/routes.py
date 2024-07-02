@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from src.media.models import MediaAsset
 
 logger = logging.getLogger(uvicorn.logging.__name__)
-router = APIRouter(prefix="/media", tags=["media"])
+router = APIRouter(prefix=settings.media_prefix, tags=["media"])
 
 @router.get("/{media_id}")
 async def read_media(media_id: uuid.UUID,

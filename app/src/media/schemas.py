@@ -8,6 +8,7 @@ from pydantic import (
     PlainSerializer,
     computed_field,
 )
+from src.configuration.settings import settings
 
 UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 
@@ -32,4 +33,4 @@ class MediaAssetResponse(BaseModel):
     @computed_field
     def uri(self) -> str:
         """Returns preformatted media URI"""
-        return f"/media/{self.id}"
+        return f"{settings.media_prefix}/{self.id}"
