@@ -33,4 +33,4 @@ class MediaAssetResponse(BaseModel):
     @computed_field
     def uri(self) -> str:
         """Returns preformatted media URI"""
-        return f"{settings.media_prefix}/{self.id}"
+        return f"{settings.media_prefix}/{self.id.hex if settings.media_short_url_id else self.id}"
