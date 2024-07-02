@@ -29,8 +29,7 @@ class MediaAssetResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @computed_field # type: ignore[misc]
-    @property
+    @computed_field
     def uri(self) -> str:
         """Returns preformatted media URI"""
         return f"/media/{self.id}"
