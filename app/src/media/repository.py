@@ -34,9 +34,8 @@ class MediaRepository (metaclass=SingletonMeta):
         await db.commit()
         return blob_id
 
-    async def read_blob(self, blob_id: uuid.UUID, db: AsyncSession) -> io.BytesIO | None:
+    async def read_blob(self, blob_id: uuid.UUID, db: AsyncSession) -> bytes | None:
         """Reads bytes chunks from database into a bytes stream. Returns the bytes stream."""
-        blob_stream = None
         bytes_data = self.__media_cache.get(blob_id)
         if not bytes_data:
             statement = select(Blob.data).filter_by(blob_id=blob_id).order_by(Blob.index)
@@ -46,12 +45,9 @@ class MediaRepository (metaclass=SingletonMeta):
             for chunk in chunks:
                 data += bytearray(chunk)
             if data:
-                bytes_data = bytes(data)
+                bytes_data = base64.b64decode(bytes(data))
                 self.__media_cache.add(blob_id, bytes_data)
-        if bytes_data:
-            blob_stream = io.BytesIO(base64.b64decode(bytes_data))
-            blob_stream.seek(0)
-        return blob_stream
+        return bytes_data
 
     async def delete_blob(self, blob_id: uuid.UUID, db: AsyncSession) -> bool:
         """Deletes bytes chunks from database into. Returns boolean."""
@@ -121,5 +117,5 @@ class MediaRepository (metaclass=SingletonMeta):
         return media_asset
 
 
-media_repository = MediaRepository(MediaCache(media_cache_size=settings.media_cache_size_bytes,
+media_repository:MediaRepository = MediaRepository(MediaCache(media_cache_size=settings.media_cache_size_bytes,
                                               media_cache_record_limit=settings.media_cache_record_limit_bytes))
