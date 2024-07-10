@@ -8,7 +8,7 @@ from typing import Any, AsyncGenerator
 
 import uvicorn
 import uvicorn.logging
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
 from sqlalchemy import text
@@ -23,8 +23,11 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 origins = settings.cors_origins.split("|")
 
 def __init_routes(initialized_app: FastAPI) -> None:
+    api_prefix = settings.api_prefix
+    router:APIRouter
     for router in get_app_routers():
-        initialized_app.include_router(router, prefix="/api")
+        initialized_app.include_router(router, prefix=api_prefix)
+        logger.info(f"Router '{api_prefix}{router.prefix}' added")
 
 @asynccontextmanager
 async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
