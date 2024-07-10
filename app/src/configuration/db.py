@@ -1,6 +1,6 @@
-
 from typing import Any, AsyncGenerator
 
+import redis.asyncio  #type: ignore[import-untyped]
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.configuration.settings import settings
 
