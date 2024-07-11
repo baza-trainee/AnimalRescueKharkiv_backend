@@ -12,8 +12,8 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.configuration.db import SessionLocal, engine, get_db
+from sqlalchemy.ext.asyncio import AsyncSession, close_all_sessions
+from src.configuration.db import engine, get_db
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
 from utils import get_app_routers
@@ -38,7 +38,7 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     __init_routes(initialized_app=initialized_app)
     yield
     #shutdown logic goes here
-    await SessionLocal.close_all()
+    await close_all_sessions()
     await engine.dispose()
     await redis_client_async.close(close_connection_pool=True)
     await FastAPILimiter.close()
