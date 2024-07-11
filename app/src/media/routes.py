@@ -35,10 +35,7 @@ async def read_media(media_id: uuid.UUID,
     return Response(content=media_bytes, media_type=media_asset.content_type)
 
 
-@router.get("/asset/{media_id}",  response_model=MediaAssetResponse,
-            description=settings.rate_limiter_description,
-            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
-                                              seconds=settings.rate_limiter_seconds))])
+@router.get("/asset/{media_id}",  response_model=MediaAssetResponse)
 async def read_media_asset(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
                     ) -> MediaAssetResponse:
@@ -48,10 +45,7 @@ async def read_media_asset(media_id: uuid.UUID,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
     return media_asset
 
-@router.get("/asset/",  response_model=List[MediaAssetResponse],
-            description=settings.rate_limiter_description,
-            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
-                                              seconds=settings.rate_limiter_seconds))])
+@router.get("/asset/",  response_model=List[MediaAssetResponse])
 async def read_media_assets(from_date: datetime =  Query(default=None, description="Filter media assets by FROM date"),
                         to_date: datetime =  Query(default=None, description="Filter media assets by TO date"),
                         media_type: str =  Query(default=None,
