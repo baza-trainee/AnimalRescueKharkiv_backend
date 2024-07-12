@@ -10,7 +10,7 @@ python = "^3.12"
 # web framework
 fastapi = "^0.111.0"
 # web server
-uvicorn = {extras = ["standard"], version = "^0.29.0"}
+uvicorn = {extras = ["standard"], version = "^0.30.0"}
 # orm
 sqlalchemy = "^2.0.30"
 # migrations
