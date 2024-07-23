@@ -85,7 +85,7 @@ async def create_media_asset(file: UploadFile = File(),
     return media_asset
 
 
-@router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT,
+@router.delete("/{meida_id}", status_code=status.HTTP_204_NO_CONTENT,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
