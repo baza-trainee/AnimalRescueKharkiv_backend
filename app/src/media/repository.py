@@ -93,7 +93,7 @@ class MediaRepository (metaclass=SingletonMeta):
                                 skip: int,
                                 limit: int,
                                 db: AsyncSession) -> list[MediaAsset]:
-        """Reads a media asset enity by its id from database. Returns the retrieved media asset"""
+        """Reads media asset enities from database. Returns the retrieved collection of media assets"""
         statement = select(MediaAsset)
         if media_type:
             statement = statement.filter_by(content_type = media_type)
