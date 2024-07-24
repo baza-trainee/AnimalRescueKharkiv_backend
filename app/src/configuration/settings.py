@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     """..."""
     api_prefix: str = ""
     media_prefix: str = "/media"
+    permissions_prefix: str = "/permissions"
     media_short_url_id: bool = True
     sqlalchemy_database_url: str
     secret_key: str
