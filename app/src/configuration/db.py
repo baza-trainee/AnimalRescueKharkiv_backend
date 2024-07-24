@@ -7,13 +7,10 @@ from src.configuration.settings import settings
 SQLALCHEMY_DATABASE_URL = settings.sqlalchemy_database_url
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
 
-SessionLocal = async_sessionmaker(autocommit=False, autoflush=True, bind=engine)
+SessionLocal = async_sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 
 # Dependency
-async def get_db() -> AsyncGenerator[Any, Any]:
+async def get_db() -> AsyncGenerator[AsyncSession, Any]:
     """..."""
-    db = SessionLocal()
-    try:
+    async with SessionLocal() as db:
         yield db
-    finally:
-        await db.aclose()
