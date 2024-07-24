@@ -12,8 +12,11 @@ from src.configuration.settings import settings
 
 UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 
-class PermissionResponse(BaseModel):
+class PermissionBase(BaseModel):
+    entity: str
+    operation: str
+
+class PermissionResponse(PermissionBase):
     id: UUIDString
-    access_right: str
 
     model_config = ConfigDict(from_attributes=True)
