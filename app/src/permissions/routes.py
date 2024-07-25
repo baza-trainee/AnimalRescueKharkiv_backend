@@ -22,15 +22,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.permissions_prefix, tags=["permissions"])
 
-@router.get("/{access_right}", response_model=PermissionResponse)
-async def read_permission(model: PermissionBase,
-                        db: AsyncSession = Depends(get_db),
-                    ) -> PermissionResponse:
-    """Retrieves permission by its entity and operation. Returns PermissionResponse"""
-    persmission: Permission = await permissions_repository.read_permission(model=model, db=db)
-    if persmission is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permission not found")
-    return persmission
 
 @router.get("/",  response_model=List[PermissionResponse])
 async def read_permissions(entity: str = Query(default=None),
@@ -70,7 +61,7 @@ async def create_permissions(models: List[PermissionBase],
     return permissions
 
 
-@router.delete("/{access_right}", status_code=status.HTTP_204_NO_CONTENT,
+@router.delete("/", status_code=status.HTTP_204_NO_CONTENT,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
