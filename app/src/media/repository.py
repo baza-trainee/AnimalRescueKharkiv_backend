@@ -93,7 +93,7 @@ class MediaRepository (metaclass=SingletonMeta):
                                 skip: int,
                                 limit: int,
                                 db: AsyncSession) -> list[MediaAsset]:
-        """Reads a media asset enity by its id from database. Returns the retrieved media asset"""
+        """Reads media asset enities from database. Returns the retrieved collection of media assets"""
         statement = select(MediaAsset)
         if media_type:
             statement = statement.filter_by(content_type = media_type)
@@ -109,7 +109,7 @@ class MediaRepository (metaclass=SingletonMeta):
         return list(media_assets)
 
     async def remove_media_asset(self, media_asset: MediaAsset, db: AsyncSession) -> MediaAsset | None:
-        """Deletes a media asset enity by its id from database. Returns the deleted media asset"""
+        """Deletes a media asset enity from database. Returns the deleted media asset"""
         if media_asset:
             await self.delete_blob(media_asset.blob_id, db=db)
             await db.delete(media_asset)

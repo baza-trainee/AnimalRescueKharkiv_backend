@@ -85,15 +85,15 @@ async def create_media_asset(file: UploadFile = File(),
     return media_asset
 
 
-@router.delete("/{photo_id}", status_code=status.HTTP_204_NO_CONTENT,
+@router.delete("/{meida_id}", status_code=status.HTTP_204_NO_CONTENT,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
 async def remove_media_asset(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
                     ) -> None:
-    """Deleted a media asset by its unique identifier"""
+    """Deletes a media asset by its unique identifier"""
     media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
     if media_asset is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meida asset not found")
     media_asset = await media_repository.remove_media_asset(media_asset=media_asset, db=db)
