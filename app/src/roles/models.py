@@ -12,6 +12,6 @@ class Role(Base):
     __table_args__ = (
         UniqueConstraint("name", "domain", name="name_domain_unique"),
     )
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid1)
     name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     domain: Mapped[str] = mapped_column(String(20), nullable=False, index=True)

@@ -12,6 +12,6 @@ class Permission(Base):
     __table_args__ = (
         UniqueConstraint("entity", "operation", name="entity_operation_unique"),
     )
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid1)
     entity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     operation: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
