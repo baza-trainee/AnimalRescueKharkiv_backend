@@ -1,11 +1,11 @@
 import uuid
 
-from sqlalchemy import UUID, Column, Integer, LargeBinary, String, UniqueConstraint, func
+from sqlalchemy import UUID, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 from sqlalchemy.orm.decl_api import DeclarativeMeta
-from sqlalchemy.sql.sqltypes import DateTime
 
 Base: DeclarativeMeta = declarative_base()
+
 
 class Permission(Base):
     __tablename__ = "permissions"
