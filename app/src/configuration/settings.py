@@ -6,11 +6,13 @@ from pydantic_settings import BaseSettings
 
 env_file = Path(__file__).parent.parent.parent.parent / ".env"
 
+
 class Settings(BaseSettings):
     """..."""
     api_prefix: str = ""
     media_prefix: str = "/media"
     permissions_prefix: str = "/permissions"
+    roles_prefix: str = "/roles"
     media_short_url_id: bool = True
     sqlalchemy_database_url: str
     secret_key: str
