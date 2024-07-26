@@ -23,7 +23,7 @@ class RolesRepository (metaclass=SingletonMeta):
     async def read_role(self, model: RoleBase, db: AsyncSession) -> Role | None:
         """Reads a role by name and domain. Returns the retrieved role"""
         statement = select(Role)
-        statement = statement.filter_by(name=model.name, domain=model.domain)
+        statement = statement.filter_by(name=model.name.lower(), domain=model.domain.lower())
         result = await db.execute(statement)
         return result.scalar_one_or_none()
 
@@ -31,9 +31,9 @@ class RolesRepository (metaclass=SingletonMeta):
         """Reads all roles with optional filtering. Returns the retrieved collection of roles"""
         statement = select(Role)
         if name:
-            statement = statement.filter_by(name=name)
+            statement = statement.filter_by(name=name.lower())
         if domain:
-            statement = statement.filter_by(domain=domain)
+            statement = statement.filter_by(domain=domain.lower())
         result = await db.execute(statement)
         roles = result.scalars().all()
         return list(roles)
