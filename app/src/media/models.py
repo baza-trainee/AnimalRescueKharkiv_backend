@@ -4,8 +4,9 @@ from sqlalchemy import UUID, Column, Integer, LargeBinary, String, func
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.sql.sqltypes import DateTime
+from src.configuration.db import Base
 
-Base: DeclarativeMeta = declarative_base()
+#Base: DeclarativeMeta = declarative_base()
 
 class Blob(Base):
     __tablename__ = "blobs"
