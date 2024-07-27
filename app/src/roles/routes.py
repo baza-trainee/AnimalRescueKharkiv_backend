@@ -10,8 +10,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
+from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
-from src.roles.schemas import RoleBase, RoleResponse
+from src.roles.schemas import RoleBase, RolePermissions, RoleResponse
 
 if TYPE_CHECKING:
     from src.roles.models import Role
@@ -62,7 +63,7 @@ async def create_roles(models: List[RoleBase],
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def delete_role(models: List[RoleBase],
+async def delete_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
                     ) -> None:
     """Deletes roles"""
@@ -77,3 +78,35 @@ async def delete_role(models: List[RoleBase],
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Roles not found")
     for role_to_delete in roles_to_delete:
         await roles_repository.delete_role(role=role_to_delete, db=db)
+
+@router.patch("/{domain}/{role_name}", response_model=RoleResponse, status_code=status.HTTP_200_OK,
+            description=settings.rate_limiter_description,
+            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
+                                              seconds=settings.rate_limiter_seconds))])
+async def update_role_permissions(domain: str, role_name: str, body: RolePermissions,
+                                                          db: AsyncSession = Depends(get_db),
+                    ) -> RoleResponse:
+    """Updates permissions for role. Returns updated role object"""
+    role:RoleResponse = None
+
+    try:
+        role_model = RoleBase(name=role_name, domain=domain)
+        role = await roles_repository.read_role(model=role_model, db=db)
+
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+
+        for permission_model in body.assign:
+            permission = await permissions_repository.read_permission(model=permission_model, db=db)
+            if permission:
+                role = await roles_repository.assign_permission(role=role, permission=permission, db=db)
+
+        for permission_model in body.unassign:
+            permission = await permissions_repository.read_permission(model=permission_model, db=db)
+            if permission:
+                role = await roles_repository.unassign_permission(role=role, permission=permission, db=db)
+
+    except ValidationError as err:
+        raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
+
+    return role
