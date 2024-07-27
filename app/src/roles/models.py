@@ -1,12 +1,9 @@
 import uuid
 
 from sqlalchemy import UUID, ForeignKey, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
-from sqlalchemy.orm.decl_api import DeclarativeMeta
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.configuration.db import Base
 from src.permissions.models import Permission
-
-#Base: DeclarativeMeta = declarative_base()
 
 
 class Role(Base):
