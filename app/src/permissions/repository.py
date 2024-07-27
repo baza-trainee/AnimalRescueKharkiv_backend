@@ -25,7 +25,7 @@ class PermissionsRepository (metaclass=SingletonMeta):
         statement = select(Permission)
         statement = statement.filter_by(entity=model.entity.lower(), operation=model.operation.lower())
         result = await db.execute(statement)
-        return result.scalar_one_or_none()
+        return result.unique().scalar_one_or_none()
 
     async def read_permissions(self, entity:str, operation:str, db: AsyncSession) -> list[Permission]:
         """Reads all permissions with optional filtering. Returns the retrieved collection of permissions"""
@@ -35,7 +35,7 @@ class PermissionsRepository (metaclass=SingletonMeta):
         if operation:
             statement = statement.filter_by(operation=operation.lower())
         result = await db.execute(statement)
-        permissions = result.scalars().all()
+        permissions = result.unique().scalars().all()
         return list(permissions)
 
     async def remove_permission(self, permission: Permission, db: AsyncSession) -> Permission | None:
