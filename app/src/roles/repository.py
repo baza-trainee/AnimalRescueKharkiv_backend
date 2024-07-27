@@ -4,6 +4,7 @@ import uvicorn
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.configuration.settings import settings
+from src.permissions.models import Permission
 from src.roles.models import Role
 from src.roles.schemas import RoleBase
 from src.singleton import SingletonMeta
@@ -44,6 +45,25 @@ class RolesRepository (metaclass=SingletonMeta):
             await db.delete(role)
             await db.commit()
         return role
+
+    async def assign_permission(self, role:Role, permission:Permission, db: AsyncSession) -> Role:
+        """Assigns one permission to the role"""
+        if permission not in role.permissions:
+            role.permissions.append(permission)
+            db.add(role)
+            await db.commit()
+            await db.refresh(role)
+        return role
+
+    async def unassign_permission(self, role:Role, permission:Permission, db: AsyncSession) -> Role:
+        """Unassigns one permission from the role"""
+        if permission in role.permissions:
+            role.permissions.remove(permission)
+            db.add(role)
+            await db.commit()
+            await db.refresh(role)
+        return role
+
 
 
 roles_repository:RolesRepository = RolesRepository()
