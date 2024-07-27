@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, List, Optional
 
 from pydantic import (
     UUID1,
@@ -7,6 +7,7 @@ from pydantic import (
     PlainSerializer,
 )
 from src.configuration.settings import settings
+from src.permissions.schemas import PermissionBase
 
 UUIDString = Annotated[UUID1, PlainSerializer(lambda x: str(x), return_type=str)]
 
@@ -18,5 +19,11 @@ class RoleBase(BaseModel):
 
 class RoleResponse(RoleBase):
     id: UUIDString
+    permissions: Optional[List[PermissionBase]]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RolePermissions(BaseModel):
+    assign: Optional[List[PermissionBase]]
+    unassign: Optional[List[PermissionBase]]
