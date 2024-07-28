@@ -34,14 +34,15 @@ def find_attributes_recursively(module: ModuleType,
         if isinstance(loader, FileFinder):
             module_spec = loader.find_spec(module_name)
             if module_spec and module_spec.loader:
-                submodule = module_spec.loader.load_module(module_name)
                 if is_pkg:
+                    submodule = module_spec.loader.load_module(module_name)
                     attributes.update(
                         find_attributes_recursively(submodule,
-                                                   attribute_name,
-                                                   attribute_type,
-                                                   match_module_name))
+                                                attribute_name,
+                                                attribute_type,
+                                                match_module_name))
                 elif not match_module_name or module_name == match_module_name:
+                    submodule = module_spec.loader.load_module(module_name)
                     for global_attr_name in dir(submodule):
                         if attribute_name and attribute_name != global_attr_name:
                             continue

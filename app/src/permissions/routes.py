@@ -1,12 +1,9 @@
 import logging
-import uuid
-from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, List
+from typing import TYPE_CHECKING, List
 
 import uvicorn
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import Response
 from fastapi_limiter.depends import RateLimiter
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
@@ -65,7 +62,7 @@ async def create_permissions(models: List[PermissionBase],
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def remove_media_asset(models: List[PermissionBase],
+async def remove_permissions(models: List[PermissionBase],
                         db: AsyncSession = Depends(get_db),
                     ) -> None:
     """Deletes permissions"""
