@@ -6,6 +6,13 @@ init-dev:
 	pre-commit install
 
 
+.PHONY: alembic-upgrade
+# Apply all migrations
+alembic-upgrade:
+	cd app &&\
+	alembic upgrade head
+
+
 .PHONY: run-hooks
 # run pre-commit hooks for all files
 run-hooks:
