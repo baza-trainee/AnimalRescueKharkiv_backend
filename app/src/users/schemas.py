@@ -13,13 +13,16 @@ UUIDString = Annotated[UUID1, PlainSerializer(lambda x: str(x), return_type=str)
 
 class UserBase(BaseModel):
     username: str
-    email: str
     domain: str
+
+
+class UserCreate(UserBase):
+    email: str
     password: str
     role: Optional[Role]
 
 
-class UserResponse(UserBase):
+class UserResponse(UserCreate):
     id: UUIDString
 
     model_comfig = ConfigDict(from_attributes=True)
