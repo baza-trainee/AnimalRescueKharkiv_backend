@@ -1,14 +1,7 @@
-from typing import Annotated, List, Optional
+from typing import Optional
 
-from pydantic import (
-    UUID1,
-    BaseModel,
-    ConfigDict,
-    PlainSerializer,
-)
-from src.roles.models import Role
-
-UUIDString = Annotated[UUID1, PlainSerializer(lambda x: str(x), return_type=str)]
+from pydantic import UUID1, BaseModel, ConfigDict, EmailStr
+from src.roles.schemas import RoleBase
 
 
 class UserBase(BaseModel):
@@ -17,12 +10,18 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    email: str
+    email: EmailStr
     password: str
-    role: Optional[Role]
 
 
-class UserResponse(UserCreate):
-    id: UUIDString
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
 
-    model_comfig = ConfigDict(from_attributes=True)
+
+class UserResponse(UserBase):
+    id: UUID1
+    email: EmailStr
+    role: Optional[RoleBase] = None
+
+    model_config = ConfigDict(from_attributes=True)

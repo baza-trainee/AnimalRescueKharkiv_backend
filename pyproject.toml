@@ -31,6 +31,7 @@ types-redis = "^4.6.0.20240425"
 redis = "^5.0.7"
 humanfriendly = "^10.0"
 sqlalchemy-utils = "^0.41.2"
+bcrypt = "4.0.1"
 
 [tool.poetry.group.dev.dependencies]
 # pre-commit linters and formatters
