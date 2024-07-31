@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from src.roles.repository import roles_repository
 from src.singleton import SingletonMeta
 from src.users.models import User
-from src.users.schemas import UserBase, UserCreate, UserUpdate
+from src.users.schemas import UserBase, UserCreate, UserPasswordUpdate, UserUpdate
 
 if TYPE_CHECKING:
     from src.roles.models import Role
@@ -60,6 +60,20 @@ class UsersRepository(metaclass=SingletonMeta):
             role = await roles_repository.read_role(model=new_data.role, db=db)
             if role:
                 user.role_id = role.id
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return user
+
+
+    async def update_password(self, user: User, update: UserPasswordUpdate, db: AsyncSession) -> User:
+        """Changes the user's password to "new password" in the database
+        after checking that the "entered password" matches the current user password
+        """
+        if user.password != update.password_old:
+            msg = "The entered password does not match the old password."
+            raise ValueError(msg)
+        user.password = update.password_new
         db.add(user)
         await db.commit()
         await db.refresh(user)
