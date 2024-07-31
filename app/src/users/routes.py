@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.users.repository import users_repository
-from src.users.schemas import UserBase, UserCreate, UserResponse, UserUpdate
+from src.users.schemas import UserBase, UserCreate, UserPasswordUpdate, UserResponse, UserUpdate
 
 if TYPE_CHECKING:
     from src.users.models import User
@@ -75,6 +75,31 @@ async def update_user(
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
 
     return user
+
+
+@router.patch("/password/{domain}/{username}", response_model=UserResponse, status_code=status.HTTP_200_OK,
+              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
+                  times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
+async def change_user_password(
+    domain: str,
+    username: str,
+    update: UserPasswordUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    """Change user password if the "entered password" matches the current user password and "new password" is correct.
+    Returns updated user
+    """
+    try:
+        user_model: UserBase = UserBase(username=username, domain=domain)
+        user: User = await users_repository.read_user(model=user_model, db=db)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        return await users_repository.update_password(user=user, update=update, db=db)
+    except ValidationError as err:
+        raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
+    except ValueError:
+        raise HTTPException(detail="Old password don`t match with entered password",
+                            status_code=status.HTTP_400_BAD_REQUEST)
 
 
 @router.delete("/", status_code=status.HTTP_204_NO_CONTENT,

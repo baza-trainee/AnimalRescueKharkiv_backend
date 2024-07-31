@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from pydantic import UUID1, BaseModel, ConfigDict, EmailStr, ValidationError, field_validator
+from pydantic import UUID1, BaseModel, ConfigDict, EmailStr, field_validator
 from src.configuration.settings import settings
 from src.roles.schemas import RoleBase, RoleResponse
 
@@ -39,6 +39,6 @@ class UserPasswordUpdate(BaseModel):
         """Check the new password using the regular expression from the password_regex settings field"""
         pattern = re.compile(settings.password_regex)
         if not pattern.match(value):
-            msg = "Password is incorrect"
-            raise ValidationError(msg)
+            msg = "New password is incorrect"
+            raise ValueError(msg)
         return value
