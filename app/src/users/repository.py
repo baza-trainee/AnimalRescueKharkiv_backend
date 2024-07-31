@@ -17,7 +17,7 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 
 class UsersRepository(metaclass=SingletonMeta):
     async def create_user(self, model: UserCreate, db: AsyncSession) -> User:
-        """Creates a new user. Returns created user"""
+        """Creates a new user. Returns the created user"""
         role: Role = None
         user = User(username=model.username.lower(),
                     email=model.email,
@@ -41,7 +41,7 @@ class UsersRepository(metaclass=SingletonMeta):
 
 
     async def read_users(self, username: str, domain: str, db: AsyncSession) -> list[User]:
-        """Reads all users with optional filtering. Returns the retrieved collection of users"""
+        """Reads all users with optional filtering. Returns the retrieved user collection"""
         statement = select(User)
         if username:
             statement = statement.filter_by(username=username.lower())
@@ -53,7 +53,7 @@ class UsersRepository(metaclass=SingletonMeta):
 
 
     async def update_user(self, user: User, new_data: UserUpdate, db: AsyncSession) -> User:
-        """Update user data. Returns updated user"""
+        """Update user data. Returns the updated user"""
         for field, value in new_data.model_dump(exclude_unset=True).items():
             setattr(user, field, value)
         db.add(user)
@@ -63,7 +63,7 @@ class UsersRepository(metaclass=SingletonMeta):
 
 
     async def delete_user(self, user: User, db: AsyncSession) -> User | None:
-        """Deletes a user from db. Returns the deleted user"""
+        """Removes a user from the database. Returns the removed user"""
         await db.delete(user)
         await db.commit()
         return user

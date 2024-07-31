@@ -8,6 +8,7 @@ from src.permissions.models import Permission
 from src.roles.models import Role
 from src.roles.schemas import RoleBase
 from src.singleton import SingletonMeta
+from src.users.models import User
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
@@ -65,6 +66,13 @@ class RolesRepository (metaclass=SingletonMeta):
             await db.refresh(role)
         return role
 
+    async def assign_role(self, role: Role, user: User, db: AsyncSession) -> User:
+        """Assigns a role to user. Returns the updated User"""
+        user.role_id = role.id
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return user
 
 
 roles_repository:RolesRepository = RolesRepository()

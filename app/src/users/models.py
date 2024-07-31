@@ -19,4 +19,4 @@ class User(Base):
     domain: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     password: Mapped[PasswordType] = mapped_column(PasswordType(schemes=["bcrypt"]), nullable=False)
     role_id: Mapped[Role] = mapped_column(ForeignKey(Role.id, ondelete="SET NULL"), nullable=True)
-    role: Mapped[Role] = relationship(Role, back_populates="users")
+    role: Mapped[Role] = relationship(Role, back_populates="users", lazy="joined")

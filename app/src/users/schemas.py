@@ -1,7 +1,7 @@
 from typing import Optional
 
 from pydantic import UUID1, BaseModel, ConfigDict, EmailStr
-from src.roles.schemas import RoleBase
+from src.roles.schemas import RoleResponse
 
 
 class UserBase(BaseModel):
@@ -22,6 +22,6 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: UUID1
     email: EmailStr
-    role: Optional[RoleBase] = None
+    role: Optional[RoleResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

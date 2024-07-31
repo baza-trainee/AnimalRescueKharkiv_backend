@@ -25,7 +25,7 @@ router = APIRouter(prefix=settings.users_prefix, tags=["users"])
                  times=settings.rate_limiter_times,
                  seconds=settings.rate_limiter_seconds))])
 async def create_users(models: List[UserCreate], db: AsyncSession = Depends(get_db)) -> List[UserResponse]:
-    """Creates new users. Returns list of created users"""
+    """Creates new users. Returns a list of created users"""
     users: List[UserResponse] = []
     try:
         for model in models:
@@ -46,7 +46,7 @@ async def read_users(
     domain: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> List[UserResponse]:
-    """Retrieves all users with optional filtering. Returns list of users"""
+    """Retrieves all users with optional filtering. Returns a list of users"""
     users: List[UserResponse] = await users_repository.read_users(username=username, domain=domain, db=db)
     if not users:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found")
@@ -62,7 +62,7 @@ async def update_user(
     body: UserUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> UserResponse:
-    """Updates user's data. Returns updated user"""
+    """Updates user data. Returns the updated user"""
     user: User = None
     try:
         user_model = UserBase(username=username, domain=domain)
