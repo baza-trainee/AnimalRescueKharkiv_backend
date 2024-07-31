@@ -54,8 +54,12 @@ class UsersRepository(metaclass=SingletonMeta):
 
     async def update_user(self, user: User, new_data: UserUpdate, db: AsyncSession) -> User:
         """Update user data. Returns the updated user"""
-        for field, value in new_data.model_dump(exclude_unset=True).items():
-            setattr(user, field, value)
+        if new_data.email:
+            user.email = new_data.email
+        if new_data.role:
+            role = await roles_repository.read_role(model=new_data.role, db=db)
+            if role:
+                user.role_id = role.id
         db.add(user)
         await db.commit()
         await db.refresh(user)

@@ -13,8 +13,6 @@ from src.configuration.settings import settings
 from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase, RolePermissions, RoleResponse
-from src.users.repository import users_repository
-from src.users.schemas import UserBase, UserResponse
 
 if TYPE_CHECKING:
     from src.roles.models import Role
@@ -112,41 +110,3 @@ async def update_role_permissions(domain: str, role_name: str, body: RolePermiss
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
 
     return role
-
-
-@router.patch("/",
-    response_model=List[UserResponse],
-    status_code=status.HTTP_200_OK,
-    description=settings.rate_limiter_description,
-    dependencies=[Depends(RateLimiter(
-        times=settings.rate_limiter_times,
-        seconds=settings.rate_limiter_seconds))])
-async def asign_role_to_users(
-    models: List[UserBase],
-    role_domain: str = Query(),
-    role_name: str = Query(),
-    db: AsyncSession = Depends(get_db),
-) -> List[UserResponse]:
-    """Assigns a role to users. Returns updated users."""
-    users: List[UserResponse] = []
-    try:
-        # Get role
-        role_model = RoleBase(name=role_name, domain=role_domain)
-        role = await roles_repository.read_role(model=role_model, db=db)
-        if not role:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-
-        # Assign role to user
-        for model in models:
-            user = await users_repository.read_user(model=model, db=db)
-            if user:
-                user = await roles_repository.assign_role(role=role, user=user, db=db)
-                users.append(user)
-            else:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                    detail=f"Not found user {model.username}")
-
-    except ValidationError as err:
-        raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
-
-    return users
