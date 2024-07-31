@@ -1,10 +1,13 @@
+import inspect
 import pkgutil
+from importlib import import_module
 from importlib.machinery import FileFinder
 from types import ModuleType
 from typing import Any, Dict
 
 import src
 from fastapi import APIRouter
+from src.configuration.db import Base
 
 
 def get_app_models() -> list:
@@ -52,3 +55,20 @@ def find_attributes_recursively(module: ModuleType,
                                 continue
                             attributes[id(global_attr)] = global_attr
     return attributes
+
+
+def import_models_from_src() -> None:
+    """Imports all model classes from src packages into a file"""
+    imported_classes = {}
+    package_name = "src"
+    package = import_module(package_name)
+
+    for finder, name, ispkg in pkgutil.walk_packages(package.__path__, package.__name__ + "."): # noqa: B007
+        if not ispkg and name.endswith(".models"):
+            module = import_module(name)
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if inspect.isclass(attr) and issubclass(attr, Base) and \
+                (attr is not Base) and (attr_name not in imported_classes):
+                        imported_classes[attr_name] = attr
+                        globals()[attr_name] = attr

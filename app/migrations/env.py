@@ -7,12 +7,10 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from src import *  # noqa: F403
 from src.configuration.db import SQLALCHEMY_DATABASE_URL, Base
-from src.media.models import *
-from src.roles.models import *
-from src.permissions.models import *
-from src.users.models import *
+from utils import import_models_from_src
 
 
+import_models_from_src()
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
