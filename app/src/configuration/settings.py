@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     permissions_prefix: str = "/permissions"
     roles_prefix: str = "/roles"
     users_prefix: str = "/users"
+    password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{8,}$"
     media_short_url_id: bool = True
     sqlalchemy_database_url: str
     secret_key: str
