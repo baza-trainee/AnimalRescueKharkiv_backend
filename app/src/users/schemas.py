@@ -11,9 +11,21 @@ class UserBase(BaseModel):
     domain: str
 
 
+def validate_password(value: str) -> str:
+    """Check the password using the regular expression from the password_regex settings field"""
+    pattern = re.compile(settings.password_regex)
+    if not pattern.match(value):
+        msg = ("The minimum password length is 8 characters, "
+        "the password must include at least 1 number, 1 letter and 1 special character")
+        raise ValueError(msg)
+    return value
+
+
 class UserCreate(UserBase):
     email: EmailStr
     password: str
+
+    validate_password = field_validator("password")(validate_password)
 
 
 class UserResponse(UserBase):
@@ -33,12 +45,4 @@ class UserPasswordUpdate(BaseModel):
     password_old: str
     password_new: str
 
-    @field_validator("password_new")
-    @classmethod
-    def validate_new_password(cls, value: str) -> str:
-        """Check the new password using the regular expression from the password_regex settings field"""
-        pattern = re.compile(settings.password_regex)
-        if not pattern.match(value):
-            msg = "New password is incorrect"
-            raise ValueError(msg)
-        return value
+    validate_new_password = field_validator("password_new")(validate_password)
