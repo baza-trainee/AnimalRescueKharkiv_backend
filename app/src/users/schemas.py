@@ -15,9 +15,7 @@ def validate_password(value: str) -> str:
     """Check the password using the regular expression from the password_regex settings field"""
     pattern = re.compile(settings.password_regex)
     if not pattern.match(value):
-        msg = ("The minimum password length is 8 characters, "
-        "the password must include at least 1 number, 1 letter and 1 special character")
-        raise ValueError(msg)
+        raise ValueError(settings.password_incorrect_message)
     return value
 
 
