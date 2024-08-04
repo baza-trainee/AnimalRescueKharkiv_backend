@@ -1,9 +1,13 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import UUID, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.configuration.db import Base
 from src.permissions.models import Permission
+
+if TYPE_CHECKING:
+    from src.users.models import User
 
 
 class Role(Base):
@@ -17,6 +21,7 @@ class Role(Base):
     permissions: Mapped[list["Permission"]] = relationship(secondary="roles_permissions",
                                                            back_populates="roles",
                                                            lazy="joined")
+    users: Mapped[list["User"]] = relationship("User", back_populates="role", lazy="joined")
 
 
 class RolePermission(Base):

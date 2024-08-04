@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     media_prefix: str = "/media"
     permissions_prefix: str = "/permissions"
     roles_prefix: str = "/roles"
+    users_prefix: str = "/users"
+    password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{8,}$"
+    password_incorrect_message: str = ("The minimum password length is 8 characters, "
+        "the password must include at least 1 number, 1 letter and 1 special character")
     media_short_url_id: bool = True
     sqlalchemy_database_url: str
     secret_key: str

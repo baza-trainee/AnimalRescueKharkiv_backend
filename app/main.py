@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import sys
 import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -88,9 +89,17 @@ async def healthchecker(db: AsyncSession = Depends(get_db)) -> dict:
         raise HTTPException(status_code=500, detail="Database is not configured properly.")
 
 
+def handle_signals() -> int:
+    """Determines the appropriate signal to send for process termination based on the operating system."""
+    if sys.platform == "win32":
+        signal_name = signal.SIGBREAK
+    else:
+        signal_name = signal.SIGINT
+    return signal_name
+
+
 if __name__ == "__main__":
     try:
         uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
     except KeyboardInterrupt:
-        os.kill(os.getpid(), signal.SIGBREAK)
-        os.kill(os.getpid(), signal.SIGINT)
+        os.kill(os.getpid(), handle_signals())

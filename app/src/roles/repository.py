@@ -66,5 +66,4 @@ class RolesRepository (metaclass=SingletonMeta):
         return role
 
 
-
 roles_repository:RolesRepository = RolesRepository()
