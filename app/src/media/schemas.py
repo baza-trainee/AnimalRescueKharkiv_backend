@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 
 from pydantic import (
-    UUID1,
+    UUID4,
     BaseModel,
     ConfigDict,
     PlainSerializer,
@@ -10,7 +10,7 @@ from pydantic import (
 )
 from src.configuration.settings import settings
 
-UUIDString = Annotated[UUID1, PlainSerializer(lambda x: str(x), return_type=str)]
+UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 
 class MediaAssetInfo(BaseModel):
     blob_id: UUIDString

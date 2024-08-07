@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from pydantic import UUID1, BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, field_validator
 from src.configuration.settings import settings
 from src.roles.schemas import RoleBase, RoleResponse
 
@@ -27,7 +27,7 @@ class UserCreate(UserBase):
 
 
 class UserResponse(UserBase):
-    id: UUID1
+    id: UUID4
     email: EmailStr
     role: Optional[RoleResponse] = None
 

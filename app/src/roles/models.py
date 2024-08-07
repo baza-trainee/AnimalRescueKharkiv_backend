@@ -15,7 +15,7 @@ class Role(Base):
     __table_args__ = (
         UniqueConstraint("name", "domain", name="name_domain_unique"),
     )
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid1)
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     domain: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     permissions: Mapped[list["Permission"]] = relationship(secondary="roles_permissions",
@@ -26,6 +26,6 @@ class Role(Base):
 
 class RolePermission(Base):
     __tablename__ = "roles_permissions"
-    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid1)
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
     role_id: Mapped[uuid.UUID] = mapped_column(ForeignKey(Role.id, ondelete="CASCADE"), nullable=False)
     permission_id: Mapped[int] = mapped_column(ForeignKey(Permission.id), nullable=False)

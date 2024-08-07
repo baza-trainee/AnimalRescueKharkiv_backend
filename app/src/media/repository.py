@@ -23,7 +23,7 @@ class MediaRepository (metaclass=SingletonMeta):
 
     async def save_blob(self, blob_data: BinaryIO, db: AsyncSession) -> uuid.UUID:
         """Saves binary/bytes data as a number of indexed chunks into database. Returns id of the saved binary blob"""
-        blob_id: uuid.UUID = uuid.uuid1()
+        blob_id: uuid.UUID = uuid.uuid4()
         data = base64.b64encode(blob_data.read())
         chunk_size = settings.blob_chunk_size_bytes
         bytes_array = bytearray(data)
