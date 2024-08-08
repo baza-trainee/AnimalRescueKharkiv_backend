@@ -63,7 +63,7 @@ def read_root() -> dict:
     return {"message": "Welcome!"}
 
 
-@app.get("/api/healthcheck")
+@app.get("/healthcheck")
 async def healthchecker(db: AsyncSession = Depends(get_db)) -> dict:
     """..."""
     try:
