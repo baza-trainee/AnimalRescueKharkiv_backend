@@ -42,7 +42,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
   backend:
+    profiles: [uat, prod]
     container_name: animal.rescue.backend
     build:
       context: .
