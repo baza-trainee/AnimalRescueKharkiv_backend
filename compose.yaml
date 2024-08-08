@@ -51,7 +51,7 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-      - path: ./${ENV}.env
+      - path: ./${ENV:-uat}.env
         required: false
     command: bash -c "alembic upgrade head && python3 main.py"
     volumes:
