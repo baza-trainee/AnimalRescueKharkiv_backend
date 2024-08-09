@@ -4,7 +4,10 @@ from humanfriendly import parse_size
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
-env_file = Path(__file__).parent.parent.parent.parent / ".env"
+local_env_file = Path(__file__).parent.parent.parent.parent / "local.env"
+env_file = (local_env_file
+            if local_env_file.exists()
+            else Path(__file__).parent.parent.parent.parent / ".env")
 
 
 class Settings(BaseSettings):

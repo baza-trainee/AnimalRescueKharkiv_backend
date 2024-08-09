@@ -8,6 +8,7 @@
 **/*.sqlite3
 **/*.zip
 .env
+local.env
 
 
 **/__pycache__/**/*

@@ -6,6 +6,7 @@ volumes:
 services:
   postgres:
     image: postgres:16.3-alpine3.20
+    container_name: ${POSTGRES_HOST}
 
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -30,6 +31,7 @@ services:
 
   redis:
     image: redis:7.0-alpine
+    container_name: ${REDIS_HOST}
     environment:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
@@ -40,3 +42,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  backend:
+    profiles: [backend]
+    container_name: animal.rescue.backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+      - path: ./${ENV:-uat}.env
+        required: false
+    command: bash -c "alembic upgrade head && python3 main.py"
+    volumes:
+      - ./app:/app
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: curl --fail http://localhost:8000/healthcheck || exit 1
+      interval: 40s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
