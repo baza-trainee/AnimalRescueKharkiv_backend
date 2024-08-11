@@ -45,7 +45,7 @@ services:
 
   backend:
     profiles: [backend]
-    image: yulichorna/animalrescuekharkiv_backend
+    image: animal_rescue_backend
     container_name: animal.rescue.backend
     build:
       context: .
