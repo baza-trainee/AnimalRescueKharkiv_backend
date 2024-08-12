@@ -20,6 +20,7 @@ from src.configuration.settings import settings
 from utils import get_app_routers
 
 logger = logging.getLogger(uvicorn.logging.__name__)
+logger.setLevel(level=settings.logging_level)
 
 origins = settings.cors_origins.split("|")
 

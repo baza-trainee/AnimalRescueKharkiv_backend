@@ -12,6 +12,7 @@ env_file = (local_env_file
 
 class Settings(BaseSettings):
     """..."""
+    logging_level: str = "INFO"
     api_prefix: str = ""
     media_prefix: str = "/media"
     permissions_prefix: str = "/permissions"
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
     password_incorrect_message: str = ("The minimum password length is 8 characters, "
         "the password must include at least 1 number, 1 letter and 1 special character")
     media_short_url_id: bool = True
+    default_cache_ttl: int = 15*60
     sqlalchemy_database_url: str
     secret_key: str
     algorithm: str
