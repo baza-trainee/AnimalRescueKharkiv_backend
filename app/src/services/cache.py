@@ -5,8 +5,6 @@ from typing import Optional
 
 import uvicorn
 from src.configuration.redis import redis_client_async
-from src.configuration.settings import settings
-from src.singleton import SingletonMeta
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
