@@ -66,3 +66,4 @@ class Cache(metaclass=SingletonMeta):
             for cahce_key in self.__all_cache_keys:
                 await self.__client.delete(cahce_key)
                 logger.debug(f"Redis Cache: record with {cahce_key} invalidated")
+            self.__all_cache_keys.clear()
