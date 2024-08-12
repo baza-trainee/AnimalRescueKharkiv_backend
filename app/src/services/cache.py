@@ -10,7 +10,7 @@ from src.singleton import SingletonMeta
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
-class Cache(metaclass=SingletonMeta):
+class Cache:
     def __init__(self, owner:object, all_prefix: str, ttl: Optional[int] = None) -> None:
         """Initializes cache instance"""
         self.__client = redis_client_async
