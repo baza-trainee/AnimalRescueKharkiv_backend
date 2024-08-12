@@ -13,23 +13,31 @@ from src.configuration.settings import settings
 from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase, RolePermissions, RoleResponse
+from src.services.cache import Cache
 
 if TYPE_CHECKING:
     from src.roles.models import Role
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.roles_prefix, tags=["roles"])
-
+router_cache: Cache = Cache(owner=router, all_prefix="roles", ttl=settings.default_cache_ttl)
 
 @router.get("/",  response_model=List[RoleResponse])
 async def read_roles(name: str = Query(default=None),
                            domain: str = Query(default=None),
                            db: AsyncSession = Depends(get_db)) -> List[RoleResponse]:
     """Retrieves all roles with optional filtering. Returns list of role objects"""
-    roles: List[RoleResponse] = await roles_repository.read_roles(
+    cache_key = router_cache.get_all_records_cache_key_with_params(
+        name,
+        domain,
+    )
+    roles: List[RoleResponse] = await router_cache.get(key=cache_key)
+    if not roles:
+        roles = await roles_repository.read_roles(
                                                             name=name,
                                                             domain=domain,
                                                             db=db)
+        await router_cache.set(key=cache_key, value=roles)
     if not roles:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No roles found")
     return roles
@@ -56,6 +64,7 @@ async def create_roles(models: List[RoleBase],
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
     except IntegrityError as err:
         raise HTTPException(detail=jsonable_encoder(err), status_code=status.HTTP_409_CONFLICT)
+    await router_cache.invalidate_all_keys()
     return roles
 
 
@@ -78,6 +87,7 @@ async def delete_roles(models: List[RoleBase],
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Roles not found")
     for role_to_delete in roles_to_delete:
         await roles_repository.delete_role(role=role_to_delete, db=db)
+    await router_cache.invalidate_all_keys()
 
 @router.patch("/{domain}/{role_name}", response_model=RoleResponse, status_code=status.HTTP_200_OK,
             description=settings.rate_limiter_description,
@@ -109,4 +119,5 @@ async def update_role_permissions(domain: str, role_name: str, body: RolePermiss
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
 
+    await router_cache.invalidate_all_keys()
     return role
