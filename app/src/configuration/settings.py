@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     password_incorrect_message: str = ("The minimum password length is 8 characters, "
         "the password must include at least 1 number, 1 letter and 1 special character")
     media_short_url_id: bool = True
-    default_cache_ttl: int = 15*60
+    default_cache_ttl: int = 15 * 60 # 15 minutes
     sqlalchemy_database_url: str
     secret_key: str
     algorithm: str

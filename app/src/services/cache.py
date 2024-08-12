@@ -15,7 +15,7 @@ class Cache:
         self.__owner = owner
         self.__all_prefix = all_prefix
         self.__all_cache_keys: set[str] = set()
-        self.__ttl = ttl or 15*60
+        self.__ttl = ttl or 15 * 60 #default 15 minutes
 
     @property
     def all_cache_keys(self) -> set[str]:
