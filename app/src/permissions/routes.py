@@ -19,24 +19,24 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.permissions_prefix, tags=["permissions"])
-router_cache: Cache = Cache(owner=router, all_prefix="permissions", ttl=settings.default_cache_ttl)
+permissions_router_cache: Cache = Cache(owner=router, all_prefix="permissions", ttl=settings.default_cache_ttl)
 
 @router.get("/",  response_model=List[PermissionResponse])
 async def read_permissions(entity: str = Query(default=None),
                            operation: str = Query(default=None),
                            db: AsyncSession = Depends(get_db)) -> List[PermissionResponse]:
     """Retrieves all permissions with optional filtering. Returns list of permission objects"""
-    cache_key = router_cache.get_all_records_cache_key_with_params(
+    cache_key = permissions_router_cache.get_all_records_cache_key_with_params(
         entity,
         operation,
     )
-    permissions: List[PermissionResponse] = await router_cache.get(key=cache_key)
+    permissions: List[PermissionResponse] = await permissions_router_cache.get(key=cache_key)
     if not permissions:
         permissions = await permissions_repository.read_permissions(
                                                                             entity=entity,
                                                                             operation=operation,
                                                                             db=db)
-        await router_cache.set(key=cache_key, value=permissions)
+        await permissions_router_cache.set(key=cache_key, value=permissions)
     if not permissions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No permissions found")
     return permissions
@@ -63,7 +63,7 @@ async def create_permissions(models: List[PermissionBase],
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
     except IntegrityError as err:
         raise HTTPException(detail=jsonable_encoder(err), status_code=status.HTTP_409_CONFLICT)
-    await router_cache.invalidate_all_keys()
+    await permissions_router_cache.invalidate_all_keys()
     return permissions
 
 
@@ -86,4 +86,4 @@ async def remove_permissions(models: List[PermissionBase],
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permissions not found")
     for permission_to_delete in permissions_to_delete:
         await permissions_repository.remove_permission(permission=permission_to_delete, db=db)
-    await router_cache.invalidate_all_keys()
+    await permissions_router_cache.invalidate_all_keys()

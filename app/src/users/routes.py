@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.users_prefix, tags=["users"])
-router_cache: Cache = Cache(owner=router, all_prefix="users", ttl=settings.default_cache_ttl)
+users_router_cache: Cache = Cache(owner=router, all_prefix="users", ttl=settings.default_cache_ttl)
 
 
 @router.post("/", response_model=List[UserResponse], status_code=status.HTTP_201_CREATED,
@@ -39,7 +39,7 @@ async def create_users(models: List[UserCreate], db: AsyncSession = Depends(get_
     except IntegrityError as err:
         raise HTTPException(detail=jsonable_encoder(err), status_code=status.HTTP_409_CONFLICT)
 
-    await router_cache.invalidate_all_keys()
+    await users_router_cache.invalidate_all_keys()
     return users
 
 
@@ -50,14 +50,14 @@ async def read_users(
     db: AsyncSession = Depends(get_db),
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
-    cache_key = router_cache.get_all_records_cache_key_with_params(
+    cache_key = users_router_cache.get_all_records_cache_key_with_params(
         username,
         domain,
     )
-    users: List[UserResponse] = await router_cache.get(key=cache_key)
+    users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
         users = await users_repository.read_users(username=username, domain=domain, db=db)
-        await router_cache.set(key=cache_key, value=users)
+        await users_router_cache.set(key=cache_key, value=users)
     if not users:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found")
     return users
@@ -84,7 +84,7 @@ async def update_user(
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
 
-    await router_cache.invalidate_all_keys()
+    await users_router_cache.invalidate_all_keys()
     return user
 
 
@@ -105,7 +105,7 @@ async def change_user_password(
         user: User = await users_repository.read_user(model=user_model, db=db)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        await router_cache.invalidate_all_keys()
+        await users_router_cache.invalidate_all_keys()
         return await users_repository.update_password(user=user, update=update, db=db)
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
@@ -132,4 +132,4 @@ async def delete_users(models: List[UserBase], db: AsyncSession = Depends(get_db
 
     for user_to_delete in users_to_delete:
         await users_repository.delete_user(user=user_to_delete, db=db)
-    await router_cache.invalidate_all_keys()
+    await users_router_cache.invalidate_all_keys()
