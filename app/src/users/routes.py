@@ -57,7 +57,8 @@ async def read_users(
     users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
         users = await users_repository.read_users(username=username, domain=domain, db=db)
-        await users_router_cache.set(key=cache_key, value=users)
+        user_responses = [UserResponse.model_validate(user) for user in users]
+        await users_router_cache.set(key=cache_key, value=user_responses)
     if not users:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found")
     return users
