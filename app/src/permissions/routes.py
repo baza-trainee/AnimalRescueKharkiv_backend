@@ -36,7 +36,8 @@ async def read_permissions(entity: str = Query(default=None),
                                                                             entity=entity,
                                                                             operation=operation,
                                                                             db=db)
-        await permissions_router_cache.set(key=cache_key, value=permissions)
+        permission_responses = [PermissionResponse.model_validate(permission) for permission in permissions]
+        await permissions_router_cache.set(key=cache_key, value=permission_responses)
     if not permissions:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No permissions found")
     return permissions
