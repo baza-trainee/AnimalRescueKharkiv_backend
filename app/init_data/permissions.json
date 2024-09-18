@@ -1,0 +1,22 @@
+[
+    {
+        "entity": "user",
+        "operation": "create"
+    },
+    {
+        "entity": "user",
+        "operation": "delete"
+    },
+    {
+        "entity": "user",
+        "operation": "update"
+    },
+    {
+        "entity": "role",
+        "operation": "assign"
+    },
+    {
+        "entity": "role",
+        "operation": "unassign"
+    }
+]

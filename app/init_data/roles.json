@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Admin",
+        "domain": "global"
+    },
+    {
+        "name": "User",
+        "domain": "global"
+    },
+    {
+        "name": "Guest",
+        "domain": "local"
+    }
+]
