@@ -1,0 +1,14 @@
+[
+    {
+        "username": "john_doe",
+        "domain": "global",
+        "email": "john_doe@example.com",
+        "password": "secure1234!"
+    },
+    {
+        "username": "jane_doe",
+        "domain": "global",
+        "email": "jane_doe@example.com",
+        "password": "password5678!"
+    }
+]

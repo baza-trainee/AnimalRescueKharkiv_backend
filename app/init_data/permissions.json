@@ -1,0 +1,10 @@
+[
+  {
+    "entity": "user",
+    "operation": "create"
+  },
+  {
+    "entity": "user",
+    "operation": "delete"
+  }
+]

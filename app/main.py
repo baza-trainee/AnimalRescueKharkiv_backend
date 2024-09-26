@@ -14,10 +14,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, close_all_sessions
-from src.configuration.db import engine, get_db
+from src.configuration.db import engine, get_db, SessionLocal
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
 from utils import get_app_routers
+from init_manager import DataInitializer
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 logger.setLevel(level=settings.logging_level)
@@ -31,6 +32,11 @@ def __init_routes(initialized_app: FastAPI) -> None:
         initialized_app.include_router(router, prefix=api_prefix)
         logger.info(f"Router '{api_prefix}{router.prefix}' added")
 
+async def __init_data():
+    async with SessionLocal() as session:
+        initializer = DataInitializer(db_session=session)
+        await initializer.run()
+
 @asynccontextmanager
 async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     """..."""
@@ -38,6 +44,7 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     logger.info("FastAPI applicaiton started...")
     await FastAPILimiter.init(redis_client_async)
     __init_routes(initialized_app=initialized_app)
+    await __init_data()
     yield
     #shutdown logic goes here
     await close_all_sessions()

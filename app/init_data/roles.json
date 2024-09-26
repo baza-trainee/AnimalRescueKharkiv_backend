@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Admin",
+    "domain": "global"
+  },
+  {
+    "name": "User",
+    "domain": "global"
+  }
+]
