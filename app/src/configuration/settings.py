@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     blob_chunk_size: str = "10MB"
     media_cache_size: str = "400MB"
     media_cache_record_limit: str = "20MB"
+    super_user_username: str = "admin"
+    super_user_password: str = "1234qwe!"
+    super_user_mail: str = "admin@example.com"
 
     model_config = ConfigDict(extra="ignore",
                               env_file=env_file if env_file.exists() else None,

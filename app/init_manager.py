@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.configuration.settings import settings
 from src.permissions.repository import permissions_repository
 from src.permissions.schemas import PermissionBase
 from src.roles.repository import roles_repository
@@ -106,6 +107,26 @@ class DataInitializer:
                 if not existing:
                     await users_repository.create_user(user_obj, self.db)
 
+    async def init_super_user(self) -> None:
+        """Initializes or updates the super user in the database.
+
+        This method checks whether a super user with the predefined
+        credentials exists in the database. If not, it creates a new
+        super user. If the user already exists, it updates the user's
+        information with the latest credentials from the settings.
+        """
+        user_obj = UserCreate(
+            username=settings.super_user_username,
+            domain="system",
+            email=settings.super_user_mail,
+            password=settings.super_user_password,
+        )
+        existing = await users_repository.read_user(user_obj, self.db)
+        if not existing:
+            await users_repository.create_user(user_obj, self.db)
+            return
+        await users_repository.update_user(user=existing, new_data=user_obj)
+
     async def run(self) -> None:
         """Executes the data initialization process for permissions, roles, and users.
 
@@ -116,3 +137,4 @@ class DataInitializer:
         await self.init_permissions()
         await self.init_roles()
         await self.init_users()
+        await self.init_super_user
