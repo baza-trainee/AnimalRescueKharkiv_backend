@@ -42,7 +42,7 @@ class DataInitializer:
         self.db = db_session
         self.base_path = base_path
 
-    def _load_json(self, filename: str) -> dict | None:
+    def __load_json(self, filename: str) -> dict | None:
         """Loads a JSON file and returns its contents as a dictionary.
 
         Parameters
@@ -62,14 +62,14 @@ class DataInitializer:
                 return json.load(file)
         return None
 
-    async def init_permissions(self) -> None:
+    async def __init_permissions(self) -> None:
         """Initializes permissions by reading the 'permissions.json' file and
         adding permissions to the database if they don't already exist.
 
         The method iterates through the list of permissions in the file, checks
         if each permission exists in the database, and creates it if it doesn't.
         """
-        permissions_data = self._load_json("permissions.json")
+        permissions_data = self.__load_json("permissions.json")
         if permissions_data:
             for perm in permissions_data:
                 perm_obj = PermissionBase(**perm)
@@ -77,14 +77,14 @@ class DataInitializer:
                 if not existing:
                     await permissions_repository.create_permission(perm_obj, self.db)
 
-    async def init_roles(self) -> None:
+    async def __init_roles(self) -> None:
         """Initializes roles by reading the 'roles.json' file and adding roles to
         the database if they don't already exist.
 
         The method iterates through the list of roles in the file, checks if
         each role exists in the database, and creates it if it doesn't.
         """
-        roles_data = self._load_json("roles.json")
+        roles_data = self.__load_json("roles.json")
         if roles_data:
             for role in roles_data:
                 role_obj = RoleBase(**role)
@@ -92,14 +92,14 @@ class DataInitializer:
                 if not existing:
                     await roles_repository.create_role(role_obj, self.db)
 
-    async def init_users(self) -> None:
+    async def __init_users(self) -> None:
         """Initializes users by reading the 'users.json' file and adding users to
         the database if they don't already exist.
 
         The method iterates through the list of users in the file, checks if
         each user exists in the database, and creates them if they don't.
         """
-        users_data = self._load_json("users.json")
+        users_data = self.__load_json("users.json")
         if users_data:
             for user in users_data:
                 user_obj = UserCreate(**user)
@@ -107,7 +107,7 @@ class DataInitializer:
                 if not existing:
                     await users_repository.create_user(user_obj, self.db)
 
-    async def init_super_user(self) -> None:
+    async def __init_super_user(self) -> None:
         """Initializes or updates the super user in the database.
 
         This method checks whether a super user with the predefined
@@ -123,9 +123,15 @@ class DataInitializer:
         )
         existing = await users_repository.read_user(user_obj, self.db)
         if not existing:
-            await users_repository.create_user(user_obj, self.db)
+            existing = await users_repository.create_user(user_obj, self.db)
             return
-        await users_repository.update_user(user=existing, new_data=user_obj)
+        if (existing.password != user_obj.password
+            or existing.email != user_obj.email):
+            existing.password = user_obj.password
+            existing.email = user_obj.email
+            self.db.add(existing)
+            await self.db.commit()
+            await self.db.refresh(existing)
 
     async def run(self) -> None:
         """Executes the data initialization process for permissions, roles, and users.
@@ -134,7 +140,7 @@ class DataInitializer:
         `init_users()` to initialize the database with the data from the respective
         JSON files.
         """
-        await self.init_permissions()
-        await self.init_roles()
-        await self.init_users()
-        await self.init_super_user
+        await self.__init_permissions()
+        await self.__init_roles()
+        await self.__init_users()
+        await self.__init_super_user()
