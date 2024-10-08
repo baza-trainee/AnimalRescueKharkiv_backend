@@ -12,7 +12,7 @@ from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.permissions.repository import permissions_repository
-from src.permissions.schemas import PermissionBase, PermissionResponse
+from src.permissions.schemas import PermissionBase, PermissionResponse, PermissionUpdate
 from src.services.cache import Cache
 
 if TYPE_CHECKING:
@@ -89,3 +89,30 @@ async def remove_permissions(models: List[PermissionBase],
     for permission_to_delete in permissions_to_delete:
         await permissions_repository.remove_permission(permission=permission_to_delete, db=db)
     await permissions_router_cache.invalidate_all_keys()
+
+
+@router.patch("/{entity}/{operation}", response_model=PermissionResponse, status_code=status.HTTP_200_OK,
+            description=settings.rate_limiter_description,
+            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
+                                              seconds=settings.rate_limiter_seconds))])
+async def update_role_permissions(entity: str, operation: str, body: PermissionUpdate,
+                                                          db: AsyncSession = Depends(get_db),
+                    ) -> PermissionResponse:
+    """Updates permissions for role. Returns updated role object"""
+    permission:PermissionResponse = None
+
+    try:
+        permission_model = PermissionBase(entity=entity, operation=operation)
+        permission = await permissions_repository.read_permission(model=permission_model, db=db)
+
+        if not permission:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permission not found")
+
+        if body.title:
+            permission = await permissions_repository.update_title(permission=permission, title=body.title, db=db)
+
+    except ValidationError as err:
+        raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
+
+    await permissions_router_cache.invalidate_all_keys()
+    return permission
