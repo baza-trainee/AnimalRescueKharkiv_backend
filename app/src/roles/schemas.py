@@ -15,6 +15,7 @@ UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)
 class RoleBase(BaseModel):
     name: str
     domain: str
+    title: Optional[str] = None
 
 
 class RoleResponse(RoleBase):
@@ -24,6 +25,7 @@ class RoleResponse(RoleBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RolePermissions(BaseModel):
-    assign: Optional[List[PermissionBase]]
-    unassign: Optional[List[PermissionBase]]
+class RoleUpdate(BaseModel):
+    title: Optional[str] = None
+    assign: Optional[List[PermissionBase]] = None
+    unassign: Optional[List[PermissionBase]] = None
