@@ -34,3 +34,6 @@ class MediaAssetResponse(BaseModel):
     def uri(self) -> str:
         """Returns preformatted media URI"""
         return f"{settings.media_prefix}/{self.id.hex if settings.media_short_url_id else self.id}"
+
+class MediaAssetReference(BaseModel):
+    id: UUIDString
