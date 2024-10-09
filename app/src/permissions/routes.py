@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
+from src.exceptions.exceptions import RETURN_MSG
 from src.permissions.repository import permissions_repository
 from src.permissions.schemas import PermissionBase, PermissionResponse
 from src.services.cache import Cache
@@ -39,7 +40,7 @@ async def read_permissions(entity: str = Query(default=None),
         permission_responses = [PermissionResponse.model_validate(permission) for permission in permissions]
         await permissions_router_cache.set(key=cache_key, value=permission_responses)
     if not permissions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No permissions found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.perm_not_found)
     return permissions
 
 
@@ -84,7 +85,7 @@ async def remove_permissions(models: List[PermissionBase],
                         is not None
                     ]
     if not permissions_to_delete:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permissions not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.perm_not_found)
     for permission_to_delete in permissions_to_delete:
         await permissions_repository.remove_permission(permission=permission_to_delete, db=db)
     await permissions_router_cache.invalidate_all_keys()
