@@ -105,7 +105,7 @@ class Auth(metaclass=SingletonMeta):
 
         try:
             payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
-            if payload["scope"] == "access_token":
+            if payload["scope"] == TokenType.access.name:
                 email = payload["sub"]
                 if email is None:
                     raise credentials_exception
