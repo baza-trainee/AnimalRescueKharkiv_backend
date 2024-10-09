@@ -14,20 +14,21 @@ import uvicorn.logging
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
+from init_manager import DataInitializer
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, close_all_sessions
 from src.auth.managers import token_manager
-from src.configuration.db import engine, get_db, SessionLocal
+from src.configuration.db import SessionLocal, engine, get_db
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
 from src.scheduler import Scheduler
 from utils import get_app_routers
-from init_manager import DataInitializer
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 logger.setLevel(level=settings.logging_level)
 
 origins = settings.cors_origins.split("|")
+
 
 
 def __init_routes(initialized_app: FastAPI) -> None:
@@ -37,7 +38,7 @@ def __init_routes(initialized_app: FastAPI) -> None:
         initialized_app.include_router(router, prefix=api_prefix)
         logger.info(f"Router '{api_prefix}{router.prefix}' added")
 
-async def __init_data():
+async def __init_data() -> None:
     async with SessionLocal() as session:
         initializer = DataInitializer(db_session=session)
         await initializer.run()
@@ -59,7 +60,9 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     __init_scheduled_jobs(scheduler=scheduler)
     executor = ThreadPoolExecutor(max_workers=2)
     executor.submit(scheduler.start)
+
     yield
+
     #shutdown logic goes here
     scheduler.stop()
     executor.shutdown()
@@ -71,6 +74,7 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
 
 
 app = FastAPI(lifespan=lifespan)
+
 
 
 app.add_middleware(

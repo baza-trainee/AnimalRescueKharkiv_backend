@@ -52,6 +52,7 @@ class UserPasswordUpdate(BaseModel):
 
     validate_new_password = field_validator("password_new")(validate_password)
 
+
 class UserPasswordNew(BaseModel):
     password_new: str
 
