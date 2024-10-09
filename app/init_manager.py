@@ -116,7 +116,6 @@ class DataInitializer:
         information with the latest credentials from the settings.
         """
         user_obj = UserCreate(
-            username=settings.super_user_username,
             domain="system",
             email=settings.super_user_mail,
             password=settings.super_user_password,
