@@ -28,7 +28,7 @@ def validate_password(value: str) -> str:
     return value
 
 
-class UserCreate(UserBase):
+class UserCreate(UserBase, UserExt):
     password: str
 
     validate_password = field_validator("password")(validate_password)
