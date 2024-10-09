@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
+from src.exceptions.exceptions import RETURN_MSG
 from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase, RolePermissions, RoleResponse
@@ -40,7 +41,7 @@ async def read_roles(name: str = Query(default=None),
         role_responses = [RoleResponse.model_validate(role) for role in roles]
         await roles_router_cache.set(key=cache_key, value=role_responses)
     if not roles:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No roles found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
     return roles
 
 
@@ -85,7 +86,7 @@ async def delete_roles(models: List[RoleBase],
                     is not None
                     ]
     if not roles_to_delete:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Roles not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
     for role_to_delete in roles_to_delete:
         await roles_repository.delete_role(role=role_to_delete, db=db)
     await roles_router_cache.invalidate_all_keys()
@@ -105,7 +106,7 @@ async def update_role_permissions(domain: str, role_name: str, body: RolePermiss
         role = await roles_repository.read_role(model=role_model, db=db)
 
         if not role:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
 
         for permission_model in body.assign:
             permission = await permissions_repository.read_permission(model=permission_model, db=db)
