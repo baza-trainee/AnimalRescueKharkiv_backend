@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     media_prefix: str = "/media"
     permissions_prefix: str = "/permissions"
     roles_prefix: str = "/roles"
+    auth_prefix: str = "/auth"
     users_prefix: str = "/users"
     password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{8,}$"
     password_incorrect_message: str = ("The minimum password length is 8 characters, "
@@ -32,6 +33,9 @@ class Settings(BaseSettings):
     mail_from_name: str
     mail_port: int
     mail_server: str
+    url_register: str = "http://localhost:8000/auth/register"
+    url_reset_pwd: str = "http://localhost:8000/auth/password/reset"
+    url_login: str = "http://localhost:8000/auth/login"
     redis_host: str
     redis_port: int
     cors_origins: str
@@ -40,6 +44,11 @@ class Settings(BaseSettings):
     blob_chunk_size: str = "10MB"
     media_cache_size: str = "400MB"
     media_cache_record_limit: str = "20MB"
+    scheduler_frequency: int = 4 * 60 * 60 # 4 hours
+    access_token_expire_mins: int = 45 # 45 minutes
+    invitation_token_expire_days: int = 10 # 10 days
+    refresh_token_expire_days: int = 7 # 7 days
+    reset_password_expire_mins: int = 15 # 15 minutes
 
     model_config = ConfigDict(extra="ignore",
                               env_file=env_file if env_file.exists() else None,
