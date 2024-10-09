@@ -49,6 +49,7 @@ async def invite_user(
                                   template_name=email_service.EmailTemplate.INVITATION,
                                   token=token,
                                   language=body.language)
+        logger.debug(f"Invitation token: {token}")
         return {"message": RETURN_MSG.email_sent % "Invitation"}
     except HTTPException as e:
         logger.error(f"{e}")
@@ -193,6 +194,7 @@ async def forgot_pasword(
                                   template_name=email_service.EmailTemplate.RESET_PASS,
                                   token=token,
                                   language=language)
+        logger.debug(f"Reset token: {token}")
         return {"message": RETURN_MSG.email_sent % "Reset password"}
     except HTTPException as e:
         logger.error(f"{e}")
