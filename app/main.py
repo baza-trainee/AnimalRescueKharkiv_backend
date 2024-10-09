@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
 import signal
 import sys
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator
@@ -14,15 +16,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_limiter import FastAPILimiter
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, close_all_sessions
+from src.auth.managers import token_manager
 from src.configuration.db import engine, get_db
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
+from src.scheduler import Scheduler
 from utils import get_app_routers
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 logger.setLevel(level=settings.logging_level)
 
 origins = settings.cors_origins.split("|")
+
 
 def __init_routes(initialized_app: FastAPI) -> None:
     api_prefix = settings.api_prefix
@@ -31,15 +36,26 @@ def __init_routes(initialized_app: FastAPI) -> None:
         initialized_app.include_router(router, prefix=api_prefix)
         logger.info(f"Router '{api_prefix}{router.prefix}' added")
 
+
+def __init_scheduled_jobs(scheduler: Scheduler) -> None:
+    scheduler.schedule_job(token_manager.delete_expired_tokens)
+
+
 @asynccontextmanager
 async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     """..."""
     #startup initialization goes here
+    scheduler: Scheduler = Scheduler(frequency=settings.scheduler_frequency, loop=asyncio.get_event_loop())
     logger.info("FastAPI applicaiton started...")
     await FastAPILimiter.init(redis_client_async)
     __init_routes(initialized_app=initialized_app)
+    __init_scheduled_jobs(scheduler=scheduler)
+    executor = ThreadPoolExecutor(max_workers=2)
+    executor.submit(scheduler.start)
     yield
     #shutdown logic goes here
+    scheduler.stop()
+    executor.shutdown()
     await close_all_sessions()
     await engine.dispose()
     await redis_client_async.close(close_connection_pool=True)
@@ -48,6 +64,7 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
 
 
 app = FastAPI(lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
