@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, List
+from typing import TYPE_CHECKING, List
 
 import uvicorn
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
+from src.exceptions.exceptions import RETURN_MSG
 from src.media.repository import media_repository
 from src.media.schemas import MediaAssetResponse
 from src.services.cache import Cache
@@ -32,12 +33,13 @@ async def read_media(media_id: uuid.UUID,
     media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
     if not media_asset:
         media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
-        await media_router_cache.set(key=cache_key, value=media_asset)
+        media_asset_response = MediaAssetResponse.model_validate(media_asset)
+        await media_router_cache.set(key=cache_key, value=media_asset_response)
     if media_asset is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     media_bytes: bytes = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
     if not media_bytes:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media blob data not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_blob_not_found)
     return Response(content=media_bytes, media_type=media_asset.content_type)
 
 
@@ -50,9 +52,10 @@ async def read_media_asset(media_id: uuid.UUID,
     media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
     if not media_asset:
         media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
-        await media_router_cache.set(key=cache_key, value=media_asset)
+        media_asset_response = MediaAssetResponse.model_validate(media_asset)
+        await media_router_cache.set(key=cache_key, value=media_asset_response)
     if media_asset is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     return media_asset
 
 @router.get("/asset/",  response_model=List[MediaAssetResponse])
@@ -84,9 +87,10 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
                                                             skip=skip,
                                                             limit=limit,
                                                             db=db)
-        await media_router_cache.set(key=cache_key, value=media_assets)
+        media_asset_responses = [MediaAssetResponse.model_validate(media_asset) for media_asset in media_assets]
+        await media_router_cache.set(key=cache_key, value=media_asset_responses)
     if not media_assets:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No media assets found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     return media_assets
 
 
@@ -117,7 +121,7 @@ async def remove_media_asset(media_id: uuid.UUID,
     """Deletes a media asset by its unique identifier"""
     media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
     if media_asset is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meida asset not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     media_asset = await media_repository.remove_media_asset(media_asset=media_asset, db=db)
     cache_key = media_router_cache.get_cache_key(key=media_id)
     await media_router_cache.invalidate_key(key=cache_key)

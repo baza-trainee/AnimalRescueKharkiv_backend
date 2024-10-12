@@ -115,8 +115,14 @@ class DataInitializer:
         super user. If the user already exists, it updates the user's
         information with the latest credentials from the settings.
         """
+        role_obj = RoleBase(
+            domain="system",
+            name=settings.super_user_role,
+        )
+        role = await roles_repository.read_role(role_obj, self.db)
+        if not role:
+            role = await roles_repository.create_role(role_obj, self.db)
         user_obj = UserCreate(
-            username=settings.super_user_username,
             domain="system",
             email=settings.super_user_mail,
             password=settings.super_user_password,
@@ -124,11 +130,17 @@ class DataInitializer:
         existing = await users_repository.read_user(user_obj, self.db)
         if not existing:
             existing = await users_repository.create_user(user_obj, self.db)
+            existing.role_id = role.id
+            self.db.add(existing)
+            await self.db.commit()
+            await self.db.refresh(existing)
             return
         if (existing.password != user_obj.password
-            or existing.email != user_obj.email):
+            or existing.email != user_obj.email
+            or existing.role_id != role.id):
             existing.password = user_obj.password
             existing.email = user_obj.email
+            existing.role_id = role.id
             self.db.add(existing)
             await self.db.commit()
             await self.db.refresh(existing)
