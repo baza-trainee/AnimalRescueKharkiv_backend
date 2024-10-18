@@ -1,5 +1,6 @@
 // custom.js
 (function () {
+  var auth_btn_event_listener_added = false;
   function updateAuthForm() {
     const oauth2Form = document.querySelector(".auth-container div div div");
     if (oauth2Form) {
@@ -74,7 +75,8 @@
     window.ui.authActions.logout = function (security) {
       const securityToken = getAuthToken();
       const authHeader = { Authorization: "Bearer " + securityToken };
-      fetch("/auth/logout", {
+      const logoutUrl = window.ui.oauthLogoutUrl;
+      fetch(logoutUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,6 +179,11 @@
       const observer = new MutationObserver(function (mutations) {
         mutations.forEach(function (mutation) {
           if (mutation.type === "childList") {
+            const auth_button = document.querySelector(".auth-wrapper button");
+            if (auth_button && !auth_btn_event_listener_added) {
+              auth_button.addEventListener("click", waitForSwaggerUI);
+              auth_btn_event_listener_added = true;
+            }
             const oauth2Form = document.querySelector(
               ".auth-container div div div",
             );
