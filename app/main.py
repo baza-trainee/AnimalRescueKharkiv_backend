@@ -100,6 +100,7 @@ async def custom_swagger_ui_html(request: Request) -> _TemplateResponse:
             "openapi_url": app.openapi_url,
             "oauth2_redirect_url": app.swagger_ui_oauth2_redirect_url,
             "init_oauth": app.swagger_ui_init_oauth,
+            "oauth_logout_url": f"{settings.api_prefix}{settings.auth_prefix}/logout",
             "custom_js_url": "/static/custom.js",
         },
     )
