@@ -9,6 +9,7 @@ from fastapi_limiter.depends import RateLimiter
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
+from src.auth.extensions import OAuth2PasswordWithDomainRequestForm
 from src.auth.managers import token_manager
 from src.auth.models import TokenType
 from src.auth.schemas import EmailInvite, TokenBase, UserRegister
@@ -114,11 +115,11 @@ async def register_user(
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
                   times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
 async def login(
-    body: OAuth2PasswordRequestForm = Depends(),
+    body: OAuth2PasswordWithDomainRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> TokenBase:
     """Logs in a user and returns a JWT token if credentials are valid"""
-    user_model = UserBase(domain=body.client_id, email=body.username)
+    user_model = UserBase(domain=body.domain, email=body.username)
     user = await users_repository.read_user(model=user_model, db=db)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.user_not_found % body.username)
