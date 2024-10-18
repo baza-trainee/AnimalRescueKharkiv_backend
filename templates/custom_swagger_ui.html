@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <title>FastAPI - Swagger UI</title>
+    <link
+      type="text/css"
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"
+    />
+    <link
+      rel="shortcut icon"
+      href="https://fastapi.tiangolo.com/img/favicon.png"
+    />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="{{ custom_js_url }}"></script>
+    <script>
+      window.onload = function () {
+        const ui = SwaggerUIBundle({
+          url: "{{ openapi_url }}",
+          dom_id: "#swagger-ui",
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIBundle.SwaggerUIStandalonePreset,
+          ],
+          layout: "BaseLayout",
+          oauth2RedirectUrl: "{{ oauth2_redirect_url }}",
+        });
+        window.ui = ui;
+      };
+    </script>
+  </body>
+</html>
