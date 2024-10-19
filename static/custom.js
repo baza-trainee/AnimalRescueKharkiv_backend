@@ -137,7 +137,11 @@
         const domain_wrapper = oauth2Form.querySelector("#domain_wrapper");
         if (domain_wrapper) {
           const domain_field = domain_wrapper.querySelector("#domain");
-          if (domain_field) {
+          if (
+            domain_field &&
+            domain_field.value !== "" &&
+            domain_field.value !== " "
+          ) {
             value = domain_field.value;
             domain_wrapper.innerHTML = `
                                 <div class="wrapper">
