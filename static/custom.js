@@ -1,14 +1,15 @@
 // custom.js
 (function () {
   var auth_btn_event_listener_added = false;
+  var auth_form_custom_elements_added = false;
+  var authorized_domain = "";
   function updateAuthForm() {
     const oauth2Form = document.querySelector(".auth-container div div div");
     if (oauth2Form) {
-      const username = oauth2Form.querySelector("#oauth_username");
+      const username = oauth2Form.querySelector("label[for=oauth_username]");
       let domain_wrapper = oauth2Form.querySelector("#domain_wrapper");
       if (username) {
-        const username_wrapper =
-          username.parentElement.parentElement.parentElement;
+        const username_wrapper = username.parentElement.parentElement;
         if (username_wrapper) {
           if (domain_wrapper == null) {
             const domainField = document.createElement("div");
@@ -23,12 +24,21 @@
         }
       }
       if (domain_wrapper) {
-        domain_wrapper.innerHTML = `
-                        <label for="domain">domain:</label>
-                        <section class="block-tablet col-10-tablet block-desktop col-10-desktop">
-                            <input id="domain" type="text" data-name="domain">
-                        </section>
+        if (authorized_domain === "" || authorized_domain == null) {
+          domain_wrapper.innerHTML = `
+                          <label for="domain">domain:</label>
+                          <section class="block-tablet col-10-tablet block-desktop col-10-desktop">
+                              <input id="domain" type="text" data-name="domain">
+                          </section>
+                      `;
+        } else {
+          domain_wrapper.innerHTML = `
+                        <div class="wrapper">
+                            <label for="domain">domain:</label>
+                            <code> ${authorized_domain} </code>
+                        </div>
                     `;
+        }
       }
     }
   }
@@ -86,6 +96,7 @@
         if (response.ok) {
           // Clear the token from Swagger UI
           originalLogout(security);
+          authorized_domain = "";
           updateAuthForm();
         } else {
           console.log("Logout failed");
@@ -128,6 +139,7 @@
               password: w,
               domain: domain,
             };
+          security.domain = domain;
           security.bodyWithDomain = buildFormData(L);
         }
       }
@@ -142,11 +154,10 @@
             domain_field.value !== "" &&
             domain_field.value !== " "
           ) {
-            value = domain_field.value;
             domain_wrapper.innerHTML = `
                                 <div class="wrapper">
                                     <label for="domain">domain:</label>
-                                    <code> ${value} </code>
+                                    <code> ${authorized_domain} </code>
                                 </div>
                             `;
           }
@@ -161,6 +172,7 @@
         security.body = bodyWithDomain;
       }
       originalAuthorizeRequest(security);
+      authorized_domain = security.auth.domain;
     };
   }
 
@@ -191,8 +203,9 @@
             const oauth2Form = document.querySelector(
               ".auth-container div div div",
             );
-            if (oauth2Form) {
+            if (oauth2Form && !auth_form_custom_elements_added) {
               addCustomElements();
+              auth_form_custom_elements_added = true;
             }
             updateAuthForm();
             observer.disconnect();
