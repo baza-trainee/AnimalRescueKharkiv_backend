@@ -7,12 +7,16 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict
 
 import uvicorn
 import uvicorn.logging
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi_limiter import FastAPILimiter
 from init_manager import DataInitializer
 from sqlalchemy import text
@@ -22,6 +26,7 @@ from src.configuration.db import SessionLocal, engine, get_db
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
 from src.scheduler import Scheduler
+from starlette.templating import _TemplateResponse
 from utils import get_app_routers
 
 logger = logging.getLogger(uvicorn.logging.__name__)
@@ -73,9 +78,36 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     logger.info("FastAPI application shutdown")
 
 
-app = FastAPI(lifespan=lifespan)
+# app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, docs_url=None)
 
+static_path = Path(__file__).parent.parent / "static"
+templates_path = Path(__file__).parent.parent / "templates"
 
+# Mount the static directory to serve static files
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+templates = Jinja2Templates(directory=templates_path)
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html(request: Request) -> _TemplateResponse:
+    """..."""
+    return templates.TemplateResponse(
+        "custom_swagger_ui.html",
+        {
+            "request": request,
+            "openapi_url": app.openapi_url,
+            "oauth2_redirect_url": app.swagger_ui_oauth2_redirect_url,
+            "init_oauth": app.swagger_ui_init_oauth,
+            "oauth_logout_url": f"{settings.api_prefix}{settings.auth_prefix}/logout",
+            "custom_js_url": "/static/custom.js",
+        },
+    )
+
+@app.get("/openapi.json", include_in_schema=False)
+async def get_open_api_endpoint() -> Dict[str, Any]:
+    """..."""
+    return get_openapi(title=app.title, version=app.version, routes=app.routes)
 
 app.add_middleware(
     CORSMiddleware,
