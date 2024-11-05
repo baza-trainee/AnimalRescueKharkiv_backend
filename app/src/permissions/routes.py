@@ -98,7 +98,7 @@ async def remove_permissions(models: List[PermissionBase],
 async def update_permission_title(entity: str, operation: str, body: PermissionUpdate,
                                                           db: AsyncSession = Depends(get_db),
                     ) -> PermissionResponse:
-    """Updates permissions for role. Returns updated role object"""
+    """Updates permission's title. Returns updated permission object"""
     permission:PermissionResponse = None
 
     try:
