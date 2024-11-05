@@ -1,6 +1,6 @@
 #!/bin/bash
 cd /home/ec2-user/ARK
-docker-compose -f compose.yaml --profile backend down
+sudo docker-compose -f compose.yaml --profile backend down
 git pull
-docker-compose -f compose.yaml --profile backend build
-docker-compose -f compose.yaml --profile backend up -d
+sudo docker-compose -f compose.yaml --profile backend build
+sudo docker-compose -f compose.yaml --profile backend up -d
