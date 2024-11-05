@@ -2,7 +2,7 @@ FROM python:3.12.5-slim-bullseye
 
 ARG YOUR_ENV
 
-ENV APP /app
+ENV APP=/app
 ENV PYTHONFAULTHANDLER=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONHASHSEED=random
@@ -33,3 +33,5 @@ RUN poetry install --no-interaction --no-ansi
 
 # Creating folders, and files for a project:
 COPY ./app $APP
+COPY ./static /static/
+COPY ./templates /templates/
