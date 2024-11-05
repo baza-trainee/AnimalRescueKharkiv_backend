@@ -13,7 +13,7 @@ from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
-from src.roles.schemas import RoleBase, RolePermissions, RoleResponse
+from src.roles.schemas import RoleBase, RoleResponse, RoleUpdate
 from src.services.cache import Cache
 
 if TYPE_CHECKING:
@@ -95,7 +95,7 @@ async def delete_roles(models: List[RoleBase],
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def update_role_permissions(domain: str, role_name: str, body: RolePermissions,
+async def update_role(domain: str, role_name: str, body: RoleUpdate,
                                                           db: AsyncSession = Depends(get_db),
                     ) -> RoleResponse:
     """Updates permissions for role. Returns updated role object"""
@@ -108,15 +108,20 @@ async def update_role_permissions(domain: str, role_name: str, body: RolePermiss
         if not role:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
 
-        for permission_model in body.assign:
-            permission = await permissions_repository.read_permission(model=permission_model, db=db)
-            if permission:
-                role = await roles_repository.assign_permission(role=role, permission=permission, db=db)
+        if body.title:
+            role = await roles_repository.update_title(role=role, title=body.title, db=db)
 
-        for permission_model in body.unassign:
-            permission = await permissions_repository.read_permission(model=permission_model, db=db)
-            if permission:
-                role = await roles_repository.unassign_permission(role=role, permission=permission, db=db)
+        if body.assign:
+            for permission_model in body.assign:
+                permission = await permissions_repository.read_permission(model=permission_model, db=db)
+                if permission:
+                    role = await roles_repository.assign_permission(role=role, permission=permission, db=db)
+
+        if body.unassign:
+            for permission_model in body.unassign:
+                permission = await permissions_repository.read_permission(model=permission_model, db=db)
+                if permission:
+                    role = await roles_repository.unassign_permission(role=role, permission=permission, db=db)
 
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)

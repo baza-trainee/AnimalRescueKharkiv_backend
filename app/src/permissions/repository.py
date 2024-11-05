@@ -45,5 +45,14 @@ class PermissionsRepository (metaclass=SingletonMeta):
             await db.commit()
         return permission
 
+    async def update_title(self, permission: Permission, title:str, db: AsyncSession) -> Permission:
+        """Updates title of the permission"""
+        if permission and title:
+            permission.title = title
+            db.add(permission)
+            await db.commit()
+            await db.refresh(permission)
+        return permission
+
 
 permissions_repository:PermissionsRepository = PermissionsRepository()

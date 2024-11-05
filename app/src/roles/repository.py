@@ -49,7 +49,7 @@ class RolesRepository (metaclass=SingletonMeta):
 
     async def assign_permission(self, role:Role, permission:Permission, db: AsyncSession) -> Role:
         """Assigns one permission to the role"""
-        if permission not in role.permissions:
+        if role and permission not in role.permissions:
             role.permissions.append(permission)
             db.add(role)
             await db.commit()
@@ -58,8 +58,17 @@ class RolesRepository (metaclass=SingletonMeta):
 
     async def unassign_permission(self, role:Role, permission:Permission, db: AsyncSession) -> Role:
         """Unassigns one permission from the role"""
-        if permission in role.permissions:
+        if role and permission in role.permissions:
             role.permissions.remove(permission)
+            db.add(role)
+            await db.commit()
+            await db.refresh(role)
+        return role
+
+    async def update_title(self, role:Role, title:str, db: AsyncSession) -> Role:
+        """Updates title of the role"""
+        if role and title:
+            role.title = title
             db.add(role)
             await db.commit()
             await db.refresh(role)
