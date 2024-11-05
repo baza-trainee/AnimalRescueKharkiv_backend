@@ -2,10 +2,11 @@
 # Update and install necessary packages
 yum update -y
 yum install -y git docker
+sudo usermod -aG docker ec2-user
 
 # Start Docker service
-systemctl start docker
-systemctl enable docker
+sudo systemctl start docker
+sudo systemctl enable docker
 
 # Create a systemd service to run the desired script on startup
 cat << 'EOF' > /etc/systemd/system/ark.service
@@ -28,5 +29,5 @@ WantedBy=multi-user.target
 EOF
 
 # Enable and start the custom systemd service
-systemctl enable ark.service
-systemctl start ark.service
+sudo systemctl enable ark.service
+sudo systemctl start ark.service
