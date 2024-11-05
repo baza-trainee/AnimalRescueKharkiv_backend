@@ -1,8 +1,8 @@
 """Title field added to Role and Permission models for ua localization
 
-Revision ID: 1420108466c8
-Revises: c8d5da9b3031
-Create Date: 2024-10-09 01:23:00.937197
+Revision ID: b42be1d3cdba
+Revises: eab61bf2f5b6
+Create Date: 2024-11-06 00:06:05.130401
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1420108466c8'
-down_revision: Union[str, None] = 'c8d5da9b3031'
+revision: str = 'b42be1d3cdba'
+down_revision: Union[str, None] = 'eab61bf2f5b6'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
