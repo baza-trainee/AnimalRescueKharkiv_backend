@@ -95,7 +95,7 @@ async def remove_permissions(models: List[PermissionBase],
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def update_role_permissions(entity: str, operation: str, body: PermissionUpdate,
+async def update_permission_title(entity: str, operation: str, body: PermissionUpdate,
                                                           db: AsyncSession = Depends(get_db),
                     ) -> PermissionResponse:
     """Updates permissions for role. Returns updated role object"""
