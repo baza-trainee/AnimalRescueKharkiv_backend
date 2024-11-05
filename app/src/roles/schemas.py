@@ -7,7 +7,7 @@ from pydantic import (
     PlainSerializer,
 )
 from src.configuration.settings import settings
-from src.permissions.schemas import PermissionBase
+from src.permissions.schemas import PermissionBase, PermissionResponse
 
 UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 
@@ -20,7 +20,7 @@ class RoleBase(BaseModel):
 
 class RoleResponse(RoleBase):
     id: UUIDString
-    permissions: Optional[List[PermissionBase]]
+    permissions: Optional[List[PermissionResponse]]
 
     model_config = ConfigDict(from_attributes=True)
 
