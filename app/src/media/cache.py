@@ -49,7 +49,7 @@ class MediaCache(metaclass=SingletonMeta):
                     self.__scavenge_cache(num)
                     num += 1
                 self.__add(new_record=new_record)
-                logger.debug(f"Media Cache: New record for {key} added")
+                logger.debug(f"Media Cache: NEW RECORD for {key} added")
 
     def get(self, key:uuid.UUID) -> bytes | None:
         """Gets byte value from the cache by the passed key"""
@@ -57,7 +57,7 @@ class MediaCache(metaclass=SingletonMeta):
             record:MediaCacheRecord = self.__cache[key]
             logger.debug(f"Media Cache: HIT - record for {key} found")
             return record.value
-        logger.debug(f"Redis Cache: MISS - no record for {key} found")
+        logger.debug(f"Media Cache: MISS - no record for {key} found")
         return None
 
     def delete(self, key: uuid.UUID) -> None:

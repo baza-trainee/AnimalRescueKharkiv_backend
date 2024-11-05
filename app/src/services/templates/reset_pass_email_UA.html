@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{subject}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            color: #ffffff !important;
+            background-color: #007bff;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>{{subject}}</h2>
+        <p>Доброго дня, {{first_name}} {{last_name}},</p>
+        <p>Ми отримали запит на відновлення паролю для Вашого облікового запису на платформі Animal Rescue Kharkiv. Натисніть на кнопку нижче, щоб ввести новий пароль:</p>
+        <p style="text-align: center;">
+            <a href="{{url}}?token={{token}}" class="button">Відновити пароль</a>
+        </p>
+        <p>Якщо Ви не надсилали запит на відновлення паролю, проігноруйте цей лист.</p>
+        <p>З повагою,<br>Команда Animal Rescue Kharkiv.</p>
+    </div>
+</body>
+</html>
