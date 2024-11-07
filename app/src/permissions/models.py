@@ -17,6 +17,7 @@ class Permission(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
     entity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     operation: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(100), nullable=True, index=False)
     roles: Mapped[list["Role"]] = relationship(secondary="roles_permissions",
                                                            back_populates="permissions",
                                                            lazy="joined")
