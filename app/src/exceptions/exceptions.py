@@ -5,8 +5,9 @@ from dataclasses import dataclass
 class ReturnMessages:
     user_logout: str = "Successfully logged out"
     user_logout_failed: str = "Logout failed"
-    user_not_found: str = "User %s not found"
+    user_not_found: str = "User '%s' not found"
     user_reg_failed: str = "User registration failed with error: %s"
+    user_duplicate: str = "User '%s' already exists in '%s' domain"
 
     email_invalid: str = "Invalid email"
     email_sent: str = "%s email sent successfully"
