@@ -37,6 +37,11 @@ async def invite_user(
 ) -> Dict[str, str]:
     """Sends an invitation email to a new user for registration"""
     try:
+        user_model = UserBase(email=body.email, domain=domain)
+        existing_user = await users_repository.read_user(model=user_model, db=db)
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=RETURN_MSG.user_duplicate % (body.email, domain))
         template_body = {"url": settings.url_register, "role": body.role.capitalize()}
         token = await auth_service.create_email_token(
             data={"sub": body.email, "domain": domain, "role": body.role},
