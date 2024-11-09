@@ -17,6 +17,7 @@ from src.auth.service import auth_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
+from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase
 from src.services.email import email_service
 from src.users.repository import users_repository
@@ -42,9 +43,14 @@ async def invite_user(
         if existing_user:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=RETURN_MSG.user_duplicate % (body.email, domain))
-        template_body = {"url": settings.url_register, "role": body.role.capitalize()}
+        role_model = RoleBase(name=body.role, domain=domain)
+        existing_role = await roles_repository.read_role(model=role_model, db=db)
+        if not existing_role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
+        title = existing_role.title or existing_role.name
+        template_body = {"url": settings.url_register, "role": title.capitalize()}
         token = await auth_service.create_email_token(
-            data={"sub": body.email, "domain": domain, "role": body.role},
+            data={"sub": body.email, "domain": domain, "role": existing_role.name},
             token_type=TokenType.invitation,
             expiration_delta=timedelta(days=settings.invitation_token_expire_days),
             db=db,

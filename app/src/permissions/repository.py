@@ -15,6 +15,8 @@ class PermissionsRepository (metaclass=SingletonMeta):
     async def create_permission(self, model: PermissionBase, db: AsyncSession) -> Permission:
         """Creates a permission definition. Returns the created permission definition"""
         permission = Permission(entity=model.entity.lower(), operation=model.operation.lower())
+        if model.title:
+            permission.title = model.title
         db.add(permission)
         await db.commit()
         await db.refresh(permission)
