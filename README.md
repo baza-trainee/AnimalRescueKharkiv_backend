@@ -4,9 +4,18 @@ Description
 
 ## Features
 
-- Feature 1
-- Feature 2
-- Feature N
+- **Full async operation**  
+- **Modular structure** for API endpoints  
+- **Asynchronous SQLAlchemy** for database operations  
+- **Alembic** support for database migrations  
+- **Easy local setup** (instructions in `README.md`)  
+- **Automated loading** of routes and SQLAlchemy models  
+- **Docker Compose** for deployment and local setup  
+  - Runs the core application, database, and Redis  
+  - Includes health checks to ensure stability and prevent crashes  
+- **Caching of GET requests** until module data changes via PUT/POST/PATCH  
+- **Pydantic schemas and settings** for request/response serialization, validation, and project configuration (including `.env` files)  
+- **OAuth2** for authorization
 
 ## Getting Started
 

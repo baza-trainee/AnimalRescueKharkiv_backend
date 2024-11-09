@@ -17,6 +17,8 @@ class RolesRepository (metaclass=SingletonMeta):
         """Creates a role definition. Returns the created role definition"""
         permissions: list[Permission] = []
         role = Role(name=model.name.lower(), domain=model.domain.lower(), permissions = permissions)
+        if model.title:
+            role.title = model.title
         db.add(role)
         await db.commit()
         await db.refresh(role)
