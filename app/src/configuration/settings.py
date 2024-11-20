@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     roles_prefix: str = "/roles"
     auth_prefix: str = "/auth"
     users_prefix: str = "/users"
+    stats_prefix: str = "/stats"
     password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{8,}$"
     password_incorrect_message: str = ("The minimum password length is 8 characters, "
         "the password must include at least 1 number, 1 letter and 1 special character")
