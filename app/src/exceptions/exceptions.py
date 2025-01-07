@@ -30,5 +30,7 @@ class ReturnMessages:
 
     role_not_found: str = "Role not found"
 
+    access_denied: str = "Access denied. Required permissions: %s"
+
 
 RETURN_MSG = ReturnMessages()
