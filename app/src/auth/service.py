@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone  #UTC
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import uvicorn
 from fastapi import Depends, Header, HTTPException, status
@@ -26,6 +26,7 @@ class Auth(metaclass=SingletonMeta):
     SECRET_KEY = settings.secret_key
     ALGORITHM = settings.algorithm
     oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_prefix}{settings.auth_prefix}/login")
+    permissions_key = "permissions"
 
     async def create_access_token(
             self,
@@ -34,7 +35,14 @@ class Auth(metaclass=SingletonMeta):
             db: AsyncSession,
     ) -> str:
         """Generates an access token for a given user by encoding their data and saves it to the database"""
-        data={"domain": user.domain, "sub": user.email, "role": user.role.name, "rid": refresh_id}
+        permissions = [str(p) for p in user.role.permissions]
+        data = {
+            "domain": user.domain,
+            "sub": user.email,
+            "role": user.role.name,
+            "rid": refresh_id,
+            self.permissions_key: permissions,
+            }
         to_encode = data.copy()
         expire_on = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_mins)
         to_encode.update({"iat": datetime.now(timezone.utc), "exp": expire_on, "scope": TokenType.access.name})
@@ -54,7 +62,13 @@ class Auth(metaclass=SingletonMeta):
             db: AsyncSession,
     ) -> Tuple[str, str]:
         """Generates a refresh token for a given user by encoding their data and saves it to the database"""
-        data={"domain": user.domain, "sub": user.email, "role": user.role.name}
+        permissions = [str(p) for p in user.role.permissions]
+        data = {
+            "domain": user.domain,
+            "sub": user.email,
+            "role": user.role.name,
+            self.permissions_key: permissions,
+            }
         to_encode = data.copy()
         expire_on = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
         to_encode.update({"iat": datetime.now(timezone.utc), "exp": expire_on, "scope": TokenType.refresh.name})
@@ -94,8 +108,8 @@ class Auth(metaclass=SingletonMeta):
             self,
             token: str = Depends(oauth2_scheme),
             db: AsyncSession = Depends(get_db),
-    ) -> str:
-        """Extracts an access token from the token record"""
+    ) -> SecurityToken:
+        """Resolves a token record"""
         token_record = await self.validate_token(token=token, token_type=TokenType.access, db=db)
         credentials_exception = HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -114,7 +128,7 @@ class Auth(metaclass=SingletonMeta):
         except JWTError:
             raise credentials_exception
 
-        return token_record.token
+        return token_record
 
     async def revoke_auth_tokens(
             self,
@@ -198,6 +212,14 @@ class Auth(metaclass=SingletonMeta):
         except JWTError as e:
             logger.error(e)
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.token_invalid)
+
+    def get_permissions_from_token(self, token: str) -> List[str] | None:
+        """Extracts list of permissions from payload"""
+        payload = self.get_payload_from_token(token=token)
+
+        if self.permissions_key in payload:
+            return payload[self.permissions_key]
+        return None
 
 
 auth_service: Auth = Auth()
