@@ -116,14 +116,14 @@ class DataInitializer:
         information with the latest credentials from the settings.
         """
         role_obj = RoleBase(
-            domain="system",
+            domain=settings.super_user_domain,
             name=settings.super_user_role,
         )
         role = await roles_repository.read_role(role_obj, self.db)
         if not role:
             role = await roles_repository.create_role(role_obj, self.db)
         user_obj = UserCreate(
-            domain="system",
+            domain=settings.super_user_domain,
             email=settings.super_user_mail,
             password=settings.super_user_password,
         )
