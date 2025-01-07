@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from src.auth.extensions import OAuth2PasswordWithDomainRequestForm
 from src.auth.managers import token_manager
-from src.auth.models import TokenType
+from src.auth.models import SecurityToken, TokenType
 from src.auth.schemas import EmailInvite, TokenBase, UserRegister
 from src.auth.service import auth_service
 from src.configuration.db import get_db
@@ -146,12 +146,12 @@ async def login(
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
                   times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
 async def logout(
-    token: str = Depends(auth_service.get_access_token),
+    token: SecurityToken = Depends(auth_service.get_access_token),
     db: Session = Depends(get_db),
 ) -> Dict[str, str]:
     """Logs out user, revokes access and refresh tokens"""
     try:
-        result = await auth_service.revoke_auth_tokens(access_token=token, db=db)
+        result = await auth_service.revoke_auth_tokens(access_token=token.token, db=db)
         if result:
             return {"logout": RETURN_MSG.user_logout}
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.user_logout_failed)
