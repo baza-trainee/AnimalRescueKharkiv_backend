@@ -21,3 +21,7 @@ class Permission(Base):
     roles: Mapped[list["Role"]] = relationship(secondary="roles_permissions",
                                                            back_populates="permissions",
                                                            lazy="joined")
+
+    def __str__(self) -> str:
+        """Returns string representation for the permission"""
+        return f"{self.entity}:{self.operation}"
