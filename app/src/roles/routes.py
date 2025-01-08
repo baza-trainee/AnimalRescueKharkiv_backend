@@ -38,8 +38,8 @@ async def read_roles(name: str = Query(default=None),
                                                             name=name,
                                                             domain=domain,
                                                             db=db)
-        role_responses = [RoleResponse.model_validate(role) for role in roles]
-        await roles_router_cache.set(key=cache_key, value=role_responses)
+        roles = [RoleResponse.model_validate(role) for role in roles]
+        await roles_router_cache.set(key=cache_key, value=roles)
     if not roles:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
     return roles
