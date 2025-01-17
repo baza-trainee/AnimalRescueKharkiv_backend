@@ -49,7 +49,7 @@ async def read_users(
     email: str = Query(default=None),
     domain: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Security(authorization_service.authorize, scopes=["user:read"]), #noqa: ARG001
+    current_user: User = Security(authorization_service.authorize_user, scopes=["user:read"]), #noqa: ARG001
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     cache_key = users_router_cache.get_all_records_cache_key_with_params(

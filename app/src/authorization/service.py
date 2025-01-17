@@ -29,7 +29,7 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 
 
 class Authorization(metaclass=SingletonMeta):
-    async def authorize(
+    async def authorize_user(
             self, scopes: SecurityScopes,
             current_security_token: SecurityToken = Depends(auth_service.get_access_token),
             ) -> User:
