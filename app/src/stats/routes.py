@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import datetime
+from random import randint
 from typing import TYPE_CHECKING, Any, List
 
 import uvicorn
@@ -8,7 +9,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi_limiter.depends import RateLimiter
-from numpy.random import PCG64, Generator
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
@@ -26,12 +26,11 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.stats_prefix, tags=["stats"])
 stats_router_cache: Cache = Cache(owner=router, all_prefix="stats", ttl=settings.default_cache_ttl)
 
-random_generator = Generator(PCG64())
 
 @router.get("/countries")
 async def read_countries_stats() -> JSONResponse:
     """Retrieves contries stats"""
-    data = random_generator.choice(range(1, 100), size=7).tolist()
+    data = [randint(1, 100) for _ in range(7)] #noqa: S311
 
     response: dict[str, Any] = {
         "labels": [
@@ -71,7 +70,7 @@ async def read_countries_stats() -> JSONResponse:
 @router.get("/departments")
 async def read_departments_stats() -> JSONResponse:
     """Retrieves departments stats"""
-    data = random_generator.choice(range(20, 100), size=8).tolist()
+    data = [randint(20, 100) for _ in range(8)] #noqa: S311
 
     response: dict[str, Any] = {
         "labels": [

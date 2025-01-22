@@ -33,8 +33,8 @@ async def read_media(media_id: uuid.UUID,
     media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
     if not media_asset:
         media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
-        media_asset_response = MediaAssetResponse.model_validate(media_asset)
-        await media_router_cache.set(key=cache_key, value=media_asset_response)
+        media_asset = MediaAssetResponse.model_validate(media_asset)
+        await media_router_cache.set(key=cache_key, value=media_asset)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     media_bytes: bytes = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
@@ -52,8 +52,8 @@ async def read_media_asset(media_id: uuid.UUID,
     media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
     if not media_asset:
         media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
-        media_asset_response = MediaAssetResponse.model_validate(media_asset)
-        await media_router_cache.set(key=cache_key, value=media_asset_response)
+        media_asset = MediaAssetResponse.model_validate(media_asset)
+        await media_router_cache.set(key=cache_key, value=media_asset)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     return media_asset
@@ -87,8 +87,8 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
                                                             skip=skip,
                                                             limit=limit,
                                                             db=db)
-        media_asset_responses = [MediaAssetResponse.model_validate(media_asset) for media_asset in media_assets]
-        await media_router_cache.set(key=cache_key, value=media_asset_responses)
+        media_asset = [MediaAssetResponse.model_validate(media_asset) for media_asset in media_assets]
+        await media_router_cache.set(key=cache_key, value=media_asset)
     if not media_assets:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     return media_assets
