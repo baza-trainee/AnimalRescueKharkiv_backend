@@ -1,13 +1,19 @@
+import enum
 from typing import TYPE_CHECKING, List
 from uuid import uuid4
 
-from sqlalchemy import UUID, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import UUID, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, func
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.configuration.db import Base
 from src.media.models import MediaAsset
 
 if TYPE_CHECKING:
     from src.users.models import User
+
+class Gender(enum.Enum):
+    male: str = "Male"
+    female: str = "Female"
 
 class Animal(Base):
     __tablename__ = "crm_animals"
@@ -18,8 +24,9 @@ class Animal(Base):
     origin__city: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     origin__address: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
 
-    general__animal_type: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
-    general__gender: Mapped[str] = mapped_column(String(10), index=True, nullable=False)
+    general__animal_type_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("crm_animal_types.id"), nullable=False)
+    general__animal_type: Mapped["AnimalType"] = relationship("AnimalType", backref="crm_animals", lazy="joined")
+    general__gender: Mapped[enum.Enum] = mapped_column(Enum(Gender), default=Gender.male)
     general__weight: Mapped[float] = mapped_column(Float, index=False, nullable=True)
     general__age: Mapped[float] = mapped_column(Float, index=False, nullable=True)
     general__specials: Mapped[str] = mapped_column(String(200), index=False, nullable=True)
@@ -70,6 +77,12 @@ class Animal(Base):
                                                          lazy="joined")
 
 
+class AnimalType(Base):
+    __tablename__ = "crm_animal_types"
+    id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(String(50), index=False, nullable=False)
+
+
 class Location(Base):
     __tablename__ = "crm_locations"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
@@ -81,6 +94,7 @@ class AnimalLocation(Base):
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
     animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id, ondelete="CASCADE"), nullable=False)
     location_id: Mapped[UUID] = mapped_column(ForeignKey(Location.id), nullable=False)
+    location: Mapped["Location"] = relationship("Location", backref="crm_animal_locations", lazy="joined")
     date_from: Mapped[Date] = mapped_column(Date, index=False, nullable=False)
     date_to: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
 
