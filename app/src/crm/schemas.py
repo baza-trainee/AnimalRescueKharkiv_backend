@@ -53,9 +53,9 @@ class DynamicResponse(BaseModel):
         """Custom validation method to handle SQLAlchemy objects with relationships."""
         if not isinstance(instance, dict):
             instance_data = {}
-            for key in instance.__mapper__.c:
+            for key in instance.__mapper__.c.keys(): #noqa: SIM118
                 instance_data[key] = getattr(instance, key, None)
-            for rel_name in instance.__mapper__.relationships:
+            for rel_name in instance.__mapper__.relationships.keys(): #noqa: SIM118
                 related_obj = getattr(instance, rel_name, None)
                 if related_obj:
                     if isinstance(related_obj, list):
