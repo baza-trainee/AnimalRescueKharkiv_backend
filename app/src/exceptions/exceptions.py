@@ -32,5 +32,9 @@ class ReturnMessages:
 
     access_denied: str = "Access denied. Required permissions: %s"
 
+    crm_animal_type_not_found: str = "Animal type '%s' not found"
+    crm_animal_not_found: str = "Animal not found"
+    crm_illegal_sort: str = "Sort expression should be in format {field}|{direction}"
+
 
 RETURN_MSG = ReturnMessages()
