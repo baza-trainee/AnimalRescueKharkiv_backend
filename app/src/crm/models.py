@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from src.users.models import User
 
 class Gender(enum.Enum):
-    male: str = "Male"
-    female: str = "Female"
+    male: str = "male"
+    female: str = "female"
 
 class Animal(Base):
     __tablename__ = "crm_animals"
@@ -24,8 +24,8 @@ class Animal(Base):
     origin__city: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     origin__address: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
 
-    general__animal_type_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("crm_animal_types.id"), nullable=False)
-    general__animal_type: Mapped["AnimalType"] = relationship("AnimalType", backref="crm_animals", lazy="joined")
+    general__animal_type_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("crm_animal_types.id"), nullable=True)
+    general__animal_type: Mapped["AnimalType"] = relationship("AnimalType", lazy="joined")
     general__gender: Mapped[enum.Enum] = mapped_column(Enum(Gender), default=Gender.male)
     general__weight: Mapped[float] = mapped_column(Float, index=False, nullable=True)
     general__age: Mapped[float] = mapped_column(Float, index=False, nullable=True)
@@ -37,7 +37,7 @@ class Animal(Base):
 
     adoption__country: Mapped[str] = mapped_column(String(50), index=False, nullable=True)
     adoption__city: Mapped[str] = mapped_column(String(50), index=False, nullable=True)
-    adoption__date: Mapped[Date] = mapped_column(Date, index=False, nullable=False)
+    adoption__date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     adoption__comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
 
     death__dead: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
@@ -54,33 +54,34 @@ class Animal(Base):
 
     updated_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), index=True)
     updated_by_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("users.id"), nullable=False)
-    updated_by: Mapped["User"] = relationship("User", backref="crm_animals", lazy="joined")
+    updated_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[updated_by_id])
 
     created_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), index=True)
     created_by_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("users.id"), nullable=False)
-    created_by: Mapped["User"] = relationship("User", backref="crm_animals", lazy="joined")
+    created_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[created_by_id])
 
     media: Mapped[List[MediaAsset]] = relationship(secondary="crm_animal_media",
-                                                   back_populates="crm_animals",
                                                    lazy="joined")
     locations: Mapped[List["AnimalLocation"]] = relationship("AnimalLocation",
-                                                             back_populates="crm_animals",
-                                                             lazy="joined")
+                                                             back_populates="animal",
+                                                             cascade="all, delete-orphan",
+                                                             lazy="joined",
+                                                             order_by="desc(AnimalLocation.date_from)")
     vaccinations: Mapped[List["Vaccination"]] = relationship("Vaccination",
-                                                             back_populates="crm_animals",
+                                                             cascade="all, delete-orphan",
                                                              lazy="joined")
     diagnoses: Mapped[List["Diagnosis"]] = relationship("Diagnosis",
-                                                        back_populates="crm_animals",
+                                                        cascade="all, delete-orphan",
                                                         lazy="joined")
     procedures: Mapped[List["Procedure"]] = relationship("Procedure",
-                                                         back_populates="crm_animals",
+                                                         cascade="all, delete-orphan",
                                                          lazy="joined")
 
 
 class AnimalType(Base):
     __tablename__ = "crm_animal_types"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    name: Mapped[str] = mapped_column(String(50), index=False, nullable=False)
+    name: Mapped[str] = mapped_column(String(50), index=True, unique=True, nullable=False)
 
 
 class Location(Base):
@@ -92,9 +93,12 @@ class Location(Base):
 class AnimalLocation(Base):
     __tablename__ = "crm_animal_locations"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id, ondelete="CASCADE"), nullable=False)
+    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id), nullable=False)
+    animal: Mapped["Animal"] = relationship("Animal",
+                                            back_populates="locations",
+                                            lazy="joined")
     location_id: Mapped[UUID] = mapped_column(ForeignKey(Location.id), nullable=False)
-    location: Mapped["Location"] = relationship("Location", backref="crm_animal_locations", lazy="joined")
+    location: Mapped["Location"] = relationship("Location", lazy="joined")
     date_from: Mapped[Date] = mapped_column(Date, index=False, nullable=False)
     date_to: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
 
@@ -102,14 +106,14 @@ class AnimalLocation(Base):
 class AnimalMedia(Base):
     __tablename__ = "crm_animal_media"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id, ondelete="CASCADE"), nullable=False)
-    media_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id, ondelete="CASCADE"), nullable=True)
+    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id), nullable=False)
+    media_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id), nullable=True)
 
 
 class Vaccination(Base):
     __tablename__ = "crm_vaccinations"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id, ondelete="CASCADE"), nullable=False)
+    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id), nullable=False)
     is_vaccinated: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     vaccine_type: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=True, nullable=True)
@@ -119,7 +123,7 @@ class Vaccination(Base):
 class Diagnosis(Base):
     __tablename__ = "crm_diagnoses"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id, ondelete="CASCADE"), nullable=False)
+    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id), nullable=False)
     name: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
@@ -128,7 +132,7 @@ class Diagnosis(Base):
 class Procedure(Base):
     __tablename__ = "crm_procedures"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id, ondelete="CASCADE"), nullable=False)
+    animal_id: Mapped[str] = mapped_column(ForeignKey(Animal.id), nullable=False)
     name: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
