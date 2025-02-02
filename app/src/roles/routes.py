@@ -39,7 +39,8 @@ async def read_roles(name: str = Query(default=None),
                                                             domain=domain,
                                                             db=db)
         roles = [RoleResponse.model_validate(role) for role in roles]
-        await roles_router_cache.set(key=cache_key, value=roles)
+        if roles:
+            await roles_router_cache.set(key=cache_key, value=roles)
     if not roles:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
     return roles
@@ -53,7 +54,7 @@ async def create_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
                     ) -> List[RoleResponse]:
     """Creates new roles. Returns list of created role objects"""
-    roles: List[RoleResponse] = []
+    roles: List[Role] = []
     try:
         roles = [
                     role
