@@ -1,9 +1,22 @@
 # mypy: disable-error-code="assignment"
+import enum
 from datetime import date as date_type
 from datetime import datetime
-from typing import Annotated, Callable, List, Optional
+from decimal import Decimal
+from typing import TYPE_CHECKING, Annotated, Callable, List, Optional
 
-from pydantic import UUID4, BaseModel, ConfigDict, Field, PlainSerializer, Strict, model_serializer
+from pydantic import (
+        UUID4,
+        BaseModel,
+        ConfigDict,
+        Field,
+        PastDate,
+        PlainSerializer,
+        Strict,
+        computed_field,
+        model_serializer,
+)
+from sqlalchemy.orm.decl_api import DeclarativeMeta
 from src.configuration.settings import settings
 from src.crm.models import Gender
 from src.media.schemas import MediaAssetReference, MediaAssetResponse
@@ -27,7 +40,7 @@ class AuthorizableField:
     def __set_name__(self, owner: BaseModel, name: str) -> None:
         """Adds attribute name to an owner's _authorizable_attributes"""
         if not hasattr(owner, "_authorizable_attributes"):
-            owner._authorizable_sections = [] #noqa: SLF001
+            owner._authorizable_attributes = [] #noqa: SLF001
         owner._authorizable_attributes.append(name) #noqa: SLF001
         setattr(owner, name, self.field_info)
 
@@ -35,28 +48,59 @@ class AuthorizableField:
 class DynamicResponse(BaseModel):
     editable_attributes: List[str] = []
 
-    def __init__(self, **data) -> None:
-        """Initializes DynamicResponse instance"""
+    @classmethod
+    def model_validate(cls, instance:DeclarativeMeta|dict) -> BaseModel: #noqa: PLR0912
+        """Custom validation method to handle SQLAlchemy objects with relationships."""
+        if not isinstance(instance, dict):
+            instance_data = {}
+            for key in instance.__mapper__.c:
+                instance_data[key] = getattr(instance, key, None)
+            for rel_name in instance.__mapper__.relationships:
+                related_obj = getattr(instance, rel_name, None)
+                if related_obj:
+                    if isinstance(related_obj, list):
+                        instance_data[rel_name] = [
+                            {k: v for k, v in rel.__dict__.items() if not k.startswith("_")}
+                            for rel in related_obj
+                        ]
+                    else:
+                        instance_data[rel_name] = {
+                            k: v for k, v in related_obj.__dict__.items()
+                            if not k.startswith("_")
+                        }
+
+        else:
+            instance_data = instance
+
         structured_data: dict = {}
-        for key, value in data.items():
-            if "__" in key:
-                section, _ = key.split("__", 1)
+        for key, value in instance_data.items():
+            if "__" in key and len(key.split("__")) == 2: #noqa: PLR2004
+                try:
+                    section, field_name = key.split("__", 1)
+                except ValueError:
+                    continue
                 if section not in structured_data:
                     structured_data[section] = {}
-                structured_data[section][key] = value
+                structured_data[section][field_name] = value
             else:
                 structured_data[key] = value
 
-        super().__init__(**structured_data)
+        return super().model_validate(structured_data)
+
+    def __serialize_value(self, value: datetime|Decimal|str) -> datetime|float|str:
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, Decimal):
+            return float(value)
+        return value
 
     @model_serializer(mode="wrap")
     def custom_serializer(self, handler:Callable) -> dict:
         """Serializes pydantic model to dict"""
         serialized_data = handler(self)
-        return {
-            name: (value if value is not None else None)
-            for name, value in serialized_data.items()
-            if value is not None}
+        return {key: self.__serialize_value(value)
+                for key, value in serialized_data.items()
+                if value is not None}
 
     @property
     def authorizable_attributes(self) -> List[str]:
@@ -64,77 +108,81 @@ class DynamicResponse(BaseModel):
         return self._authorizable_attributes
 
 
-class AnimalReferenceBase(BaseModel):
-    animal_id: Annotated[UUID4, Strict(strict=False)]
+class ReferenceBase(BaseModel):
+    id: Annotated[UUID4, Strict(strict=False)]
+
+class ResponseReferenceBase(BaseModel):
+    id: UUIDString
 
 
 class LocationBase(BaseModel):
     name: str
 
 
+class AnimalTypeBase(BaseModel):
+    name: str
+
+
 class AnimalLocationBase(BaseModel):
-    date_from: date_type
-    date_to: Optional[date_type] = None
+    location: ReferenceBase
+    date_from: PastDate
+    date_to: Optional[PastDate] = None
 
 
 class VaccinationBase(BaseModel):
     is_vaccinated: bool
-    vaccine_type: Optional[str] = None
-    date: Optional[date_type] = None
-    comment: Optional[str] = None
+    vaccine_type: Optional[str] = Field(default=None, max_length=100)
+    date: Optional[PastDate] = None
+    comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class DiagnosisBase(BaseModel):
-    is_vaccinated: bool
-    name: Optional[str] = None
-    date: Optional[date_type] = None
-    comment: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=100)
+    date: Optional[PastDate] = None
+    comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class ProcedureBase(BaseModel):
-    is_vaccinated: bool
-    name: Optional[str] = None
-    date: Optional[date_type] = None
-    comment: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=100)
+    date: Optional[PastDate] = None
+    comment: Optional[str] = Field(default=None, max_length=500)
 
 
-class LocationResponse(LocationBase):
-    id: UUIDString
-
+class AnimalTypeResponse(AnimalTypeBase, ResponseReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
-class AnimalLocationResponse(AnimalLocationBase):
-    id: UUIDString
+
+class LocationResponse(LocationBase, ResponseReferenceBase):
+    model_config = ConfigDict(from_attributes=True)
+
+class AnimalLocationResponse(AnimalLocationBase, ResponseReferenceBase):
     animal_id: SixDigitID
     location: LocationResponse
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class VaccinationResponse(VaccinationBase):
-    id: UUIDString
+class VaccinationResponse(VaccinationBase, ResponseReferenceBase):
     animal_id: SixDigitID
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class DiagnosisResponse(DiagnosisBase):
-    id: UUIDString
+class DiagnosisResponse(DiagnosisBase, ResponseReferenceBase):
     animal_id: SixDigitID
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProcedureResponse(ProcedureBase):
-    id: UUIDString
+class ProcedureResponse(ProcedureBase, ResponseReferenceBase):
     animal_id: SixDigitID
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class AnimalReponse(DynamicResponse):
+class AnimalResponse(DynamicResponse):
     id: SixDigitID
-    name: str
+    name: str = AuthorizableField()
 
     origin: Optional[DynamicSection] = AuthorizableField(default=None)
 
@@ -158,6 +206,13 @@ class AnimalReponse(DynamicResponse):
     created_at: datetime
     created_by: UserEmail
 
+    @computed_field
+    def current_location(self) -> AnimalLocationResponse | None:
+        """Dynamically generates current_location property based on the locations list"""
+        if self.locations:
+            return max(self.locations, key=lambda loc: loc.date_from)
+        return None
+
     media: Optional[List[MediaAssetResponse]] = AuthorizableField(default=None)
     locations: Optional[List[AnimalLocationResponse]] = AuthorizableField(default=None)
     vaccinations: Optional[List[VaccinationResponse]] = AuthorizableField(default=None)
@@ -165,51 +220,98 @@ class AnimalReponse(DynamicResponse):
     procedures: Optional[List[ProcedureResponse]] = AuthorizableField(default=None)
 
 
+class AnimalTypeCreate(AnimalTypeBase):
+    pass
+
+
 class LocationCreate(LocationBase):
     pass
 
-class AnimalLocationCreate(LocationBase, AnimalReferenceBase):
-    animal_id: Annotated[UUID4, Strict(strict=False)]
 
-class VaccinationCreate(VaccinationBase, AnimalReferenceBase):
+class AnimalLocationCreate(AnimalLocationBase):
     pass
 
-class DiagnosisCreate(DiagnosisBase, AnimalReferenceBase):
+
+class VaccinationCreate(VaccinationBase):
     pass
 
-class ProcedureCreate(ProcedureBase, AnimalReferenceBase):
+
+class DiagnosisCreate(DiagnosisBase):
     pass
 
-class AnimalCreate(BaseModel):
-    name: str
 
-    origin__arrival_date: date_type
-    origin__city: str
-    origin__address: Optional[str] = None
+class ProcedureCreate(ProcedureBase):
+    pass
 
-    general__animal_type_id: Annotated[UUID4, Strict(strict=False)]
+
+class AnimalName(BaseModel):
+    name: str = Field(min_length=2, max_length=30, pattern=r"^[a-zA-Zа-яА-ЯїЇ'’\-\s]+$")
+
+
+class OriginBase(BaseModel):
+    origin__arrival_date: PastDate
+    origin__city: str = Field(max_length=100)
+    origin__address: Optional[str] = Field(default=None, max_length=100)
+
+
+class GeneralBase(BaseModel):
+    general__animal_type: ReferenceBase
     general__gender: Gender = Gender.male
-    general__weight: Optional[float] = None
-    general__age: Optional[float] = None
-    general__specials: Optional[str] = None
+    general__weight: Optional[float] = Field(default=None, ge=0.0)
+    general__age: Optional[float] = Field(default=None, le=100.0)
+    general__specials: Optional[str] = Field(default=None, max_length=200)
 
-    owner__info: Optional[str] = None
 
-    comment__text: Optional[str] = None
+class OwnerBase(BaseModel):
+    owner__info: Optional[str] = Field(default=None, max_length=500)
 
-    adoption__country: Optional[str] = None
-    adoption__city: Optional[str] = None
-    adoption__date: Optional[date_type] = None
-    adoption__comment: Optional[str] = None
 
+class CommentBase(BaseModel):
+    comment__text: Optional[str] = Field(default=None, max_length=1000)
+
+
+class AdoptionBase(BaseModel):
+    adoption__country: Optional[str] = Field(default=None, max_length=50)
+    adoption__city: Optional[str] = Field(default=None, max_length=50)
+    adoption__date: Optional[PastDate] = None
+    adoption__comment: Optional[str] = Field(default=None, max_length=500)
+
+
+class DeathBase(BaseModel):
     death__dead: Optional[bool] = None
-    death__date: Optional[date_type] = None
-    death__comment: Optional[str] = None
+    death__date: Optional[PastDate] = None
+    death__comment: Optional[str] = Field(default=None, max_length=500)
 
+
+class SterilizationBase(BaseModel):
     sterilization__done: Optional[bool] = None
-    sterilization__date: Optional[date_type] = None
-    sterilization__comment: Optional[str] = None
+    sterilization__date: Optional[PastDate] = None
+    sterilization__comment: Optional[str] = Field(default=None, max_length=500)
 
+
+class MicrochippingBase(BaseModel):
     microchipping__done: Optional[bool] = None
-    microchipping__date: Optional[date_type] = None
-    microchipping__comment: Optional[str] = None
+    microchipping__date: Optional[PastDate] = None
+    microchipping__comment: Optional[str] = Field(default=None, max_length=500)
+
+
+class AnimalCreate(AnimalName,
+                   OriginBase,
+                   GeneralBase,
+                   OwnerBase,
+                   CommentBase,
+                   AdoptionBase,
+                   DeathBase,
+                   SterilizationBase,
+                   MicrochippingBase):
+    media: Optional[List[MediaAssetReference]] = None
+    locations: Optional[List[AnimalLocationCreate]] = None
+    vaccinations: Optional[List[VaccinationCreate]] = None
+    diagnoses: Optional[List[DiagnosisCreate]] = None
+    procedures: Optional[List[ProcedureCreate]] = None
+
+
+class AnimalState(enum.Enum):
+    active: str = "active"
+    dead: str = "dead"
+    adopted: str = "adopted"
