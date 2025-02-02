@@ -87,7 +87,7 @@ class AnimalType(Base):
 class Location(Base):
     __tablename__ = "crm_locations"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    name: Mapped[str] = mapped_column(String(100), index=False, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), index=False, unique=True, nullable=False)
 
 
 class AnimalLocation(Base):
