@@ -2,14 +2,14 @@ import logging
 import re
 import uuid
 from datetime import date
-from typing import List, TypeVar
+from typing import Any, Callable, List, Tuple, TypeVar
 from uuid import UUID
 
 import uvicorn
-from sqlalchemy import and_, asc, desc, func, or_
+from sqlalchemy import Select, and_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload, with_loader_criteria
+from sqlalchemy.orm import DeclarativeBase, selectinload, with_loader_criteria
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from sqlalchemy.sql.elements import UnaryExpression
 from src.configuration.settings import settings
@@ -216,7 +216,15 @@ class AnimalsRepository(metaclass=SingletonMeta):
                 return desc(getattr(Animal, field))
         return desc(Animal.created_at)
 
-    async def read_animals(self, #noqa: C901, PLR0912
+    def __filter(self,
+                       statement: Select[Tuple[DeclarativeBase]],
+                       parameter: object | None,
+                       expression: Callable[[Any], ColumnElement[bool]]) -> Select[Tuple[DeclarativeBase]]:
+        if parameter is not None:
+            statement = statement.filter(expression(parameter))
+        return statement
+
+    async def read_animals(self,
                             db: AsyncSession,
                             query: str | None = None,
                             arrival_date: date | None = None,
@@ -240,16 +248,12 @@ class AnimalsRepository(metaclass=SingletonMeta):
             condition: ColumnElement[bool] | None = self.__get_name_id_condition(query=query)
             if condition is not None:
                 statement = statement.filter(condition)
-        if arrival_date is not None:
-            statement = statement.filter_by(origin__arrival_date = arrival_date)
-        if city is not None:
-            statement = statement.filter_by(origin__city = city)
-        if animal_types is not None:
-            statement = statement.filter(Animal.general__animal_type_id.in_(animal_types))
-        if gender is not None:
-            statement = statement.filter_by(general__gender = gender)
-        if current_locations is not None:
-             statement = statement.filter(Animal.locations.any(Location.id.in_(current_locations)))
+        statement = self.__filter(statement, arrival_date, lambda x: Animal.origin__arrival_date == x)
+        statement = self.__filter(statement, city, lambda x: Animal.origin__city == x)
+        statement = self.__filter(statement, animal_types, lambda x: Animal.general__animal_type_id.in_(x))
+        statement = self.__filter(statement, gender, lambda x: Animal.general__gender == x)
+        statement = self.__filter(statement, current_locations,
+                                  lambda x: func.max(Animal.locations).any_(Location.id.in_(x)))
         if animal_state is not None:
             match animal_state:
                 case AnimalState.active:
@@ -259,22 +263,18 @@ class AnimalsRepository(metaclass=SingletonMeta):
                     statement = statement.filter(Animal.death__dead == True) #noqa: E712
                 case AnimalState.adopted:
                     statement = statement.filter(Animal.adoption__date is not None)
-        if is_microchpped is not None:
-            statement = statement.filter_by(microchipping__done = is_microchpped)
-        if microchpping_date is not None:
-            statement = statement.filter(Animal.microchipping__date == microchpping_date)
-        if is_sterilized is not None:
-            statement = statement.filter_by(sterilization__done = is_sterilized)
-        if sterilization_date is not None:
-            statement = statement.filter(Animal.sterilization__date == sterilization_date)
+        statement = self.__filter(statement, is_microchpped, lambda x: Animal.microchipping__done == x)
+        statement = self.__filter(statement, microchpping_date, lambda x: Animal.microchipping__date == x)
+        statement = self.__filter(statement, is_sterilized, lambda x: Animal.sterilization__done == x)
+        statement = self.__filter(statement, sterilization_date, lambda x: Animal.sterilization__date == x)
         if is_vaccinated is not None:
             match is_vaccinated:
                 case True:
                     statement = statement.filter(Animal.vaccinations.any())
                 case False:
                     statement = statement.filter(~Animal.vaccinations.any())
-        if vaccination_date is not None:
-            statement = statement.filter(Animal.vaccinations.any(Vaccination.date == vaccination_date))
+        statement = self.__filter(statement, vaccination_date,
+                                  lambda x: Animal.vaccinations.any(Vaccination.date == x))
         statement = statement.offset(skip).limit(limit)
         if sort:
             statement = statement.order_by(self.__get_order_expression(sort=sort))
