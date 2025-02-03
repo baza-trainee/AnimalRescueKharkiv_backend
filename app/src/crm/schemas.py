@@ -48,33 +48,33 @@ class AuthorizableField:
 class DynamicResponse(BaseModel):
     editable_attributes: List[str] = []
 
+    __ATTRIBUTE_NAME_PARTS = 2
+
     @classmethod
-    def model_validate(cls, instance:DeclarativeMeta|dict) -> BaseModel: #noqa: PLR0912
-        """Custom validation method to handle SQLAlchemy objects with relationships."""
-        if not isinstance(instance, dict):
-            instance_data = {}
-            for key in instance.__mapper__.c.keys(): #noqa: SIM118
-                instance_data[key] = getattr(instance, key, None)
-            for rel_name in instance.__mapper__.relationships.keys(): #noqa: SIM118
-                related_obj = getattr(instance, rel_name, None)
-                if related_obj:
-                    if isinstance(related_obj, list):
-                        instance_data[rel_name] = [
-                            {k: v for k, v in rel.__dict__.items() if not k.startswith("_")}
-                            for rel in related_obj
-                        ]
-                    else:
-                        instance_data[rel_name] = {
-                            k: v for k, v in related_obj.__dict__.items()
-                            if not k.startswith("_")
-                        }
+    def __get_instance_attributes(cls, instance: DeclarativeMeta) -> dict:
+        instance_data = {}
+        for key in instance.__mapper__.c.keys(): #noqa: SIM118
+            instance_data[key] = getattr(instance, key, None)
+        for rel_name in instance.__mapper__.relationships.keys(): #noqa: SIM118
+            related_obj = getattr(instance, rel_name, None)
+            if related_obj:
+                if isinstance(related_obj, list):
+                    instance_data[rel_name] = [
+                        {k: v for k, v in rel.__dict__.items() if not k.startswith("_")}
+                        for rel in related_obj
+                    ]
+                else:
+                    instance_data[rel_name] = {
+                        k: v for k, v in related_obj.__dict__.items()
+                        if not k.startswith("_")
+                    }
+        return instance_data
 
-        else:
-            instance_data = instance
-
+    @classmethod
+    def __structure_instance_data(cls, instance_data: dict) -> dict:
         structured_data: dict = {}
         for key, value in instance_data.items():
-            if "__" in key and len(key.split("__")) == 2: #noqa: PLR2004
+            if "__" in key and len(key.split("__")) == cls.__ATTRIBUTE_NAME_PARTS:
                 try:
                     section, field_name = key.split("__", 1)
                 except ValueError:
@@ -84,8 +84,14 @@ class DynamicResponse(BaseModel):
                 structured_data[section][field_name] = value
             else:
                 structured_data[key] = value
+        return structured_data
 
-        return super().model_validate(structured_data)
+    @classmethod
+    def model_validate(cls, instance:DeclarativeMeta|dict) -> BaseModel:
+        """Custom validation method to handle SQLAlchemy objects with relationships."""
+        instance_data = instance if isinstance(instance, dict) else cls.__get_instance_attributes(instance=instance)
+
+        return super().model_validate(cls.__structure_instance_data(instance_data=instance_data))
 
     def __serialize_value(self, value: datetime|Decimal|str) -> datetime|float|str:
         if isinstance(value, datetime):
