@@ -257,10 +257,10 @@ class AnimalsRepository(metaclass=SingletonMeta):
         if animal_state is not None:
             match animal_state:
                 case AnimalState.active:
-                    statement = statement.filter(and_(Animal.death__dead == False, #noqa: E712
+                    statement = statement.filter(and_(not Animal.death__dead,
                                                       Animal.adoption__date is None))
                 case AnimalState.dead:
-                    statement = statement.filter(Animal.death__dead == True) #noqa: E712
+                    statement = statement.filter(Animal.death__dead)
                 case AnimalState.adopted:
                     statement = statement.filter(Animal.adoption__date is not None)
         statement = self.__filter(statement, is_microchpped, lambda x: Animal.microchipping__done == x)
