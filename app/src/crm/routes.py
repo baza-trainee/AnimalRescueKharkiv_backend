@@ -1,7 +1,6 @@
-# ruff: noqa: E501, PLR0912, C901
 import logging
 from datetime import date
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List
 from uuid import UUID
 
 import uvicorn
@@ -11,6 +10,7 @@ from fastapi_limiter.depends import RateLimiter
 from pydantic import PastDate, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase
 from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
@@ -43,22 +43,38 @@ animal_types_router_cache: Cache = Cache(owner=router, all_prefix="animal_types"
 locations_router_cache: Cache = Cache(owner=router, all_prefix="locations", ttl=settings.default_cache_ttl)
 
 @router.get(settings.animals_prefix,  response_model=List[AnimalResponse])
-async def read_animals( query: str  | None = Query(default=None, description="Search query with names or IDs. Default: None"),
-                        arrival_date: PastDate | None = Query(default=None, description="Arrival date. Default: None"),
-                        city: str | None = Query(default=None, description="City of collection. Default: None"),
-                        animal_types: List[UUID] | None = Query(default=None, description="List of animal type IDs. Default: None"),
-                        gender: Gender | None = Query(default=Gender.male, description="Animal gender ('male', 'female'). Default: 'male'"),
-                        current_locations: List[UUID] | None = Query(default=None, description="List of location IDs. Default: None"),
-                        animal_state: AnimalState | None = Query(default=AnimalState.active, description="State of animal ('active', 'dead', 'adopted'). Default: 'active'"),
-                        is_microchpped: bool | None = Query(default=True, description="Is microchppied? Default: True"),
-                        microchpping_date: PastDate | None = Query(default=None, description="Microchipping date. Default: None"),
-                        is_sterilized: bool | None = Query(default=True, description="Is sterilized? Default: True"),
-                        sterilization_date: PastDate | None = Query(default=None, description="Sterilization date. Default: None"),
-                        is_vaccinated: bool | None = Query(default=True, description="Is vaccinated? Default: True"),
-                        vaccination_date: PastDate | None = Query(default=None, description="Vaccination date. Default: None"),
-                        skip: int | None = Query(default=0, ge=0, description="Records to skip in response"),
-                        limit: int | None = Query(default=20, ge=1, le=50, description="Records per response to show"),
-                        sort: str | None = Query(default="created_at|desc", description="Sort option in format of {field}|{direction}. Default: created_at|desc"),
+async def read_animals( query: str  | None = Query(default=None,
+                                description="Search query with names or IDs. Default: None"),
+                        arrival_date: PastDate | None = Query(default=None,
+                                                              description="Arrival date. Default: None"),
+                        city: str | None = Query(default=None,
+                                description="City of collection. Default: None"),
+                        animal_types: List[UUID] | None = Query(default=None,
+                                description="List of animal type IDs. Default: None"),
+                        gender: Gender | None = Query(default=Gender.male,
+                                description="Animal gender ('male', 'female'). Default: 'male'"),
+                        current_locations: List[UUID] | None = Query(default=None,
+                                description="List of location IDs. Default: None"),
+                        animal_state: AnimalState | None = Query(default=AnimalState.active,
+                                description="State of animal ('active', 'dead', 'adopted'). Default: 'active'"),
+                        is_microchpped: bool | None = Query(default=True,
+                                description="Is microchppied? Default: True"),
+                        microchpping_date: PastDate | None = Query(default=None,
+                                description="Microchipping date. Default: None"),
+                        is_sterilized: bool | None = Query(default=True,
+                                description="Is sterilized? Default: True"),
+                        sterilization_date: PastDate | None = Query(default=None,
+                                description="Sterilization date. Default: None"),
+                        is_vaccinated: bool | None = Query(default=True,
+                                description="Is vaccinated? Default: True"),
+                        vaccination_date: PastDate | None = Query(default=None,
+                                description="Vaccination date. Default: None"),
+                        skip: int | None = Query(default=0, ge=0,
+                                description="Records to skip in response"),
+                        limit: int | None = Query(default=20, ge=1, le=50,
+                                description="Records per response to show"),
+                        sort: str | None = Query(default="created_at|desc",
+                                description="Sort option in format of {field}|{direction}. Default: created_at|desc"),
                         db: AsyncSession = Depends(get_db)) -> List[AnimalResponse]:
     """Retrieves an animal by id. Returns the retrieved animal object"""
     cache_key = animals_router_cache.get_all_records_cache_key_with_params(
@@ -207,6 +223,21 @@ async def create_animal_types(models: List[AnimalTypeCreate],
     return animal_types
 
 
+async def __add_references(model: DeclarativeBase,
+                           references: List[BaseModel],
+                           func: Callable[..., Awaitable[DeclarativeBase]],
+                           user: User,
+                           db: AsyncSession,
+                           ) -> DeclarativeBase:
+    if references:
+        for ref_model in references:
+            model = await func(
+                model=ref_model,
+                animal=model,
+                user=user,
+                db=db)
+    return model
+
 @router.post(settings.animals_prefix, response_model=AnimalResponse, status_code=status.HTTP_201_CREATED,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
@@ -223,29 +254,39 @@ async def create_animal(model: AnimalCreate,
         if not animal_type:
             raise HTTPException(detail=RETURN_MSG.crm_animal_type_not_found,
                             status_code=status.HTTP_400_BAD_REQUEST)
-        animal = await animals_repository.set_animal_type(animal_type=animal_type, animal=animal, user=current_user, db=db)
-
+        animal = await animals_repository.set_animal_type(animal_type=animal_type,
+                                                          animal=animal,
+                                                          user=current_user,
+                                                          db=db)
         if model.locations:
             for location_model in model.locations:
                 location = await animals_repository.read_location(location_id=location_model.location.id, db=db)
                 if location:
-                    animal = await animals_repository.add_animal_location(model=location_model, location=location, animal=animal, user=current_user, db=db)
-
-        if model.vaccinations:
-            for vaccination_model in model.vaccinations:
-                animal = await animals_repository.add_vaccination_to_animal(model=vaccination_model, animal=animal, user=current_user, db=db)
-
-        if model.diagnoses:
-            for diagnosis_model in model.diagnoses:
-                animal = await animals_repository.add_diagnosis_to_animal(model=diagnosis_model, animal=animal, user=current_user, db=db)
-
-        if model.procedures:
-            for procedure_model in model.procedures:
-                animal = await animals_repository.add_procedure_to_animal(model=procedure_model, animal=animal, user=current_user, db=db)
-
-        if model.media:
-            for media_asset_model in model.media:
-                animal = await animals_repository.add_media_to_animal(model=media_asset_model, animal=animal, user=current_user, db=db)
+                    animal = await animals_repository.add_animal_location(model=location_model,
+                                                                          location=location,
+                                                                          animal=animal,
+                                                                          user=current_user,
+                                                                          db=db)
+        animal = await __add_references(model=animal,
+                                        references=model.vaccinations,
+                                        func=animals_repository.add_vaccination_to_animal,
+                                        user=current_user,
+                                        db=db)
+        animal = await __add_references(model=animal,
+                                        references=model.diagnoses,
+                                        func=animals_repository.add_diagnosis_to_animal,
+                                        user=current_user,
+                                        db=db)
+        animal = await __add_references(model=animal,
+                                        references=model.procedures,
+                                        func=animals_repository.add_procedure_to_animal,
+                                        user=current_user,
+                                        db=db)
+        animal = await __add_references(model=animal,
+                                        references=model.media,
+                                        func=animals_repository.add_media_to_animal,
+                                        user=current_user,
+                                        db=db)
 
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
