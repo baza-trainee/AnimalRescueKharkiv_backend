@@ -47,7 +47,8 @@ class Cache:
 
     def get_all_records_cache_key_with_params(self, *args) -> str:
         """Generates and returns cache key for all records"""
-        key = hash(args)
+        sanitized_args = tuple(tuple(arg) if isinstance(arg, list) else arg for arg in args)
+        key = hash(sanitized_args)
         cache_key = self.get_cache_key(f"all_{self.__all_prefix}_{key}")
         self.__all_cache_keys.add(cache_key)
         return cache_key

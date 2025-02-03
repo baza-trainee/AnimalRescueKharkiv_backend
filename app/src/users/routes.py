@@ -49,7 +49,7 @@ async def read_users(
     email: str = Query(default=None),
     domain: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Security(authorization_service.authorize_user, scopes=["user:read"]), #noqa: ARG001
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["user:read"]),
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     cache_key = users_router_cache.get_all_records_cache_key_with_params(
@@ -60,7 +60,8 @@ async def read_users(
     if not users:
         users = await users_repository.read_users(email=email, domain=domain, db=db)
         users = [UserResponse.model_validate(user) for user in users]
-        await users_router_cache.set(key=cache_key, value=users)
+        if users:
+            await users_router_cache.set(key=cache_key, value=users)
     if not users:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % "")
     return users

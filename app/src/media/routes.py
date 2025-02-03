@@ -34,7 +34,8 @@ async def read_media(media_id: uuid.UUID,
     if not media_asset:
         media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
         media_asset = MediaAssetResponse.model_validate(media_asset)
-        await media_router_cache.set(key=cache_key, value=media_asset)
+        if media_asset:
+            await media_router_cache.set(key=cache_key, value=media_asset)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     media_bytes: bytes = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
@@ -43,7 +44,7 @@ async def read_media(media_id: uuid.UUID,
     return Response(content=media_bytes, media_type=media_asset.content_type)
 
 
-@router.get("/asset/{media_id}",  response_model=MediaAssetResponse)
+@router.get(settings.media_assets_prefix + "/{media_id}",  response_model=MediaAssetResponse)
 async def read_media_asset(media_id: uuid.UUID,
                         db: AsyncSession = Depends(get_db),
                     ) -> MediaAssetResponse:
@@ -53,12 +54,13 @@ async def read_media_asset(media_id: uuid.UUID,
     if not media_asset:
         media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
         media_asset = MediaAssetResponse.model_validate(media_asset)
-        await media_router_cache.set(key=cache_key, value=media_asset)
+        if media_asset:
+            await media_router_cache.set(key=cache_key, value=media_asset)
     if media_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     return media_asset
 
-@router.get("/asset/",  response_model=List[MediaAssetResponse])
+@router.get(settings.media_assets_prefix,  response_model=List[MediaAssetResponse])
 async def read_media_assets(from_date: datetime =  Query(default=None, description="Filter media assets by FROM date"),
                         to_date: datetime =  Query(default=None, description="Filter media assets by TO date"),
                         media_type: str =  Query(default=None,
@@ -88,13 +90,14 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
                                                             limit=limit,
                                                             db=db)
         media_asset = [MediaAssetResponse.model_validate(media_asset) for media_asset in media_assets]
-        await media_router_cache.set(key=cache_key, value=media_asset)
+        if media_assets:
+            await media_router_cache.set(key=cache_key, value=media_asset)
     if not media_assets:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
     return media_assets
 
 
-@router.post("/", response_model=MediaAssetResponse, status_code=status.HTTP_201_CREATED,
+@router.post(settings.media_assets_prefix, response_model=MediaAssetResponse, status_code=status.HTTP_201_CREATED,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
@@ -111,7 +114,7 @@ async def create_media_asset(file: UploadFile = File(),
     return media_asset
 
 
-@router.delete("/{meida_id}", status_code=status.HTTP_204_NO_CONTENT,
+@router.delete(settings.media_assets_prefix + "/{meida_id}", status_code=status.HTTP_204_NO_CONTENT,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
