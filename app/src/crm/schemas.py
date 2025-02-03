@@ -5,6 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated, Callable, List, Optional
 
+from fastapi import Query
 from pydantic import (
         UUID4,
         BaseModel,
@@ -48,8 +49,6 @@ class AuthorizableField:
 class DynamicResponse(BaseModel):
     editable_attributes: List[str] = []
 
-    __ATTRIBUTE_NAME_PARTS = 2
-
     @classmethod
     def __get_instance_attributes(cls, instance: DeclarativeMeta) -> dict:
         instance_data = {}
@@ -74,7 +73,7 @@ class DynamicResponse(BaseModel):
     def __structure_instance_data(cls, instance_data: dict) -> dict:
         structured_data: dict = {}
         for key, value in instance_data.items():
-            if "__" in key and len(key.split("__")) == cls.__ATTRIBUTE_NAME_PARTS:
+            if "__" in key and len(key.split("__")) == 2: #noqa: PLR2004
                 try:
                     section, field_name = key.split("__", 1)
                 except ValueError:
