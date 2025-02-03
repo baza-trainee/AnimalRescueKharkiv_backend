@@ -1,11 +1,11 @@
 # mypy: disable-error-code="assignment"
 import enum
-from datetime import date as date_type
+import re
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Annotated, Callable, List, Optional
+from typing import Annotated, Callable, List, Optional
 
-from fastapi import Query
+from fastapi import HTTPException, Query, status
 from pydantic import (
         UUID4,
         BaseModel,
@@ -15,18 +15,20 @@ from pydantic import (
         PlainSerializer,
         Strict,
         computed_field,
+        field_validator,
         model_serializer,
 )
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from src.configuration.settings import settings
 from src.crm.models import Gender
+from src.exceptions.exceptions import RETURN_MSG
 from src.media.schemas import MediaAssetReference, MediaAssetResponse
 from src.users.schemas import UserResponse
 
 UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 SixDigitID = Annotated[int, PlainSerializer(lambda x: str(x).zfill(6), return_type=str)]
 UserEmail = Annotated[UserResponse, PlainSerializer(lambda x: x.email, return_type=str)]
-
+SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class DynamicSection(BaseModel):
         model_config = ConfigDict(extra="allow")
@@ -320,3 +322,15 @@ class AnimalState(enum.Enum):
     active: str = "active"
     dead: str = "dead"
     adopted: str = "adopted"
+
+class Sorting(BaseModel):
+    sort: str | None = Query(default="created_at|desc",
+                                description="Sort option in format of {field}|{direction}. Default: created_at|desc")
+
+    @field_validator("sort")
+    @classmethod
+    def validate_regex(cls, value: str) -> str:
+        """Validates sorting option value via regular expression"""
+        if not re.match(SORTING_VALIDATION_REGEX, value):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.crm_illegal_sort)
+        return value

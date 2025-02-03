@@ -1,6 +1,5 @@
 import logging
-from datetime import date
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List
+from typing import Awaitable, Callable, List
 from uuid import UUID
 
 import uvicorn
@@ -14,22 +13,18 @@ from sqlalchemy.orm import DeclarativeBase
 from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
-from src.crm.models import Animal, AnimalLocation, AnimalType, Diagnosis, Gender, Location, Procedure, Vaccination
+from src.crm.models import AnimalType, Gender, Location
 from src.crm.repository import animals_repository
 from src.crm.schemas import (
     AnimalCreate,
-    AnimalLocationCreate,
     AnimalResponse,
     AnimalState,
     AnimalTypeCreate,
     AnimalTypeResponse,
     BaseModel,
-    DiagnosisCreate,
     LocationCreate,
     LocationResponse,
-    ProcedureCreate,
-    ReferenceBase,
-    VaccinationCreate,
+    Sorting,
 )
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
@@ -51,7 +46,7 @@ async def read_animals( query: str  | None = Query(default=None,
                                 description="City of collection. Default: None"),
                         animal_types: List[UUID] | None = Query(default=None,
                                 description="List of animal type IDs. Default: None"),
-                        gender: Gender | None = Query(default=Gender.male,
+                        gender: Gender | None = Query(default=None,
                                 description="Animal gender ('male', 'female'). Default: 'male'"),
                         current_locations: List[UUID] | None = Query(default=None,
                                 description="List of location IDs. Default: None"),
@@ -73,8 +68,7 @@ async def read_animals( query: str  | None = Query(default=None,
                                 description="Records to skip in response"),
                         limit: int | None = Query(default=20, ge=1, le=50,
                                 description="Records per response to show"),
-                        sort: str | None = Query(default="created_at|desc",
-                                description="Sort option in format of {field}|{direction}. Default: created_at|desc"),
+                        sorting: Sorting = Depends(),
                         db: AsyncSession = Depends(get_db)) -> List[AnimalResponse]:
     """Retrieves an animal by id. Returns the retrieved animal object"""
     cache_key = animals_router_cache.get_all_records_cache_key_with_params(
@@ -93,7 +87,7 @@ async def read_animals( query: str  | None = Query(default=None,
         vaccination_date,
         skip,
         limit,
-        sort,
+        sorting.sort,
     )
     animals: List[AnimalResponse] = await animals_router_cache.get(key=cache_key)
     if not animals:
@@ -113,7 +107,7 @@ async def read_animals( query: str  | None = Query(default=None,
             vaccination_date=vaccination_date,
             skip=skip,
             limit=limit,
-            sort=sort,
+            sort=sorting.sort,
             db=db)
         animals = [AnimalResponse.model_validate(animal) for animal in animals]
         if animals:

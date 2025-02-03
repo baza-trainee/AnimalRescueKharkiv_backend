@@ -9,12 +9,13 @@ import uvicorn
 from sqlalchemy import Select, and_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import DeclarativeBase, selectinload, with_loader_criteria
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from sqlalchemy.sql.elements import UnaryExpression
 from src.configuration.settings import settings
 from src.crm.models import Animal, AnimalLocation, AnimalType, Diagnosis, Gender, Location, Procedure, Vaccination
 from src.crm.schemas import (
+    SORTING_VALIDATION_REGEX,
     AnimalCreate,
     AnimalLocationCreate,
     AnimalState,
@@ -26,7 +27,6 @@ from src.crm.schemas import (
 )
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
-from src.permissions.models import Permission
 from src.singleton import SingletonMeta
 from src.users.models import User
 
@@ -206,7 +206,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return or_(*expression)
 
     def __get_order_expression(self, sort: str) -> UnaryExpression[_T]:
-        if "|" not in sort:
+        if not re.match(SORTING_VALIDATION_REGEX, sort):
             raise ValueError(RETURN_MSG.crm_illegal_sort)
         field, direction = sort.split("|", 1)
         match direction.lower():
