@@ -160,7 +160,7 @@ async def read_locations(db: AsyncSession = Depends(get_db)) -> List[LocationRes
                                               seconds=settings.rate_limiter_seconds))])
 async def create_locations(models: List[LocationCreate],
                         db: AsyncSession = Depends(get_db),
-                        current_user: User = Security(authorization_service.authorize_user, scopes=["location:write"]), #noqa: ARG001
+                        _current_user: User = Security(authorization_service.authorize_user, scopes=["location:write"]),
                     ) -> List[LocationResponse]:
     """Creates a new location definition. Returns the created location object"""
     locations: List[Location]
@@ -202,7 +202,7 @@ async def read_animal_types(db: AsyncSession = Depends(get_db)) -> List[AnimalTy
                                               seconds=settings.rate_limiter_seconds))])
 async def create_animal_types(models: List[AnimalTypeCreate],
                         db: AsyncSession = Depends(get_db),
-                        current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]), #noqa: ARG001
+                        _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
                     ) -> List[AnimalTypeResponse]:
     """Creates a new animal type definition. Returns the created animal type object"""
     animal_types: List[AnimalType]
@@ -302,7 +302,7 @@ async def create_animal(model: AnimalCreate,
                                               seconds=settings.rate_limiter_seconds))])
 async def delete_animal(animal_id: int,
                         db: AsyncSession = Depends(get_db),
-                        current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]), #noqa: ARG001
+                        _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
                     ) -> None:
     """Deletes the animal by ID"""
     animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
