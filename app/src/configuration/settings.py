@@ -15,11 +15,14 @@ class Settings(BaseSettings):
     logging_level: str = "INFO"
     api_prefix: str = ""
     media_prefix: str = "/media"
+    media_assets_prefix: str = "/assets"
     permissions_prefix: str = "/permissions"
     roles_prefix: str = "/roles"
     auth_prefix: str = "/auth"
     users_prefix: str = "/users"
     stats_prefix: str = "/stats"
+    crm_prefix: str = "/crm"
+    animals_prefix: str = "/animals"
     password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{8,}$"
     password_incorrect_message: str = ("The minimum password length is 8 characters, "
         "the password must include at least 1 number, 1 letter and 1 special character")
@@ -48,6 +51,8 @@ class Settings(BaseSettings):
     super_user_password: str = "1234qwe!"
     super_user_mail: str = "admin@ark.ua"
     super_user_role: str = "admin"
+    super_user_domain: str = "system"
+    super_user_permission: str = "system:admin"
     scheduler_frequency: int = 4 * 60 * 60 # 4 hours
     access_token_expire_mins: int = 45 # 45 minutes
     invitation_token_expire_days: int = 10 # 10 days

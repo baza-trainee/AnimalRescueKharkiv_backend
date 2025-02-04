@@ -1,23 +1,22 @@
 import logging
-from typing import TYPE_CHECKING, List
+from typing import List
 
 import uvicorn
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_limiter.depends import RateLimiter
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.services.cache import Cache
 from src.services.email import email_service
+from src.users.models import User
 from src.users.repository import users_repository
 from src.users.schemas import UserBase, UserCreate, UserPasswordUpdate, UserResponse, UserUpdate
-
-if TYPE_CHECKING:
-    from src.users.models import User
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.users_prefix, tags=["users"])
@@ -50,6 +49,7 @@ async def read_users(
     email: str = Query(default=None),
     domain: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["user:read"]),
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     cache_key = users_router_cache.get_all_records_cache_key_with_params(
@@ -59,8 +59,9 @@ async def read_users(
     users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
         users = await users_repository.read_users(email=email, domain=domain, db=db)
-        user_responses = [UserResponse.model_validate(user) for user in users]
-        await users_router_cache.set(key=cache_key, value=user_responses)
+        users = [UserResponse.model_validate(user) for user in users]
+        if users:
+            await users_router_cache.set(key=cache_key, value=users)
     if not users:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % "")
     return users

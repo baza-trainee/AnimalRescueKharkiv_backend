@@ -6,7 +6,7 @@ class SingletonMeta(ABCMeta):
 
     _instances: ClassVar = {}
 
-    def __call__(cls, *args, **kwargs) -> (Any | None): #noqa:ANN401
+    def __call__(cls, *args, **kwargs) -> (object | None):
         """Creates a singleton instance of a type"""
         if cls.__module__.startswith("src."):
             if cls not in cls._instances:
