@@ -17,13 +17,20 @@ from src.crm.models import Animal, AnimalLocation, AnimalType, Diagnosis, Gender
 from src.crm.schemas import (
     SORTING_VALIDATION_REGEX,
     AnimalCreate,
-    AnimalLocationCreate,
+    AnimalLocationBase,
+    AnimalLocationUpdate,
     AnimalState,
-    AnimalTypeCreate,
-    DiagnosisCreate,
-    LocationCreate,
-    ProcedureCreate,
-    VaccinationCreate,
+    AnimalTypeBase,
+    BaseModel,
+    DiagnosisBase,
+    DiagnosisUpdate,
+    IntReferenceBase,
+    LocationBase,
+    ProcedureBase,
+    ProcedureUpdate,
+    UUIDReferenceBase,
+    VaccinationBase,
+    VaccinationUpdate,
 )
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
@@ -36,7 +43,7 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 
 
 class AnimalsRepository(metaclass=SingletonMeta):
-    async def create_location(self, model: LocationCreate, db: AsyncSession) -> Location:
+    async def create_location(self, model: LocationBase, db: AsyncSession) -> Location:
         """Creates a location definition. Returns the created location definition"""
         location = Location(name=model.name)
         db.add(location)
@@ -44,7 +51,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         await db.refresh(location)
         return location
 
-    async def create_animal_type(self, model: AnimalTypeCreate, db: AsyncSession) -> AnimalType:
+    async def create_animal_type(self, model: AnimalTypeBase, db: AsyncSession) -> AnimalType:
         """Creates an animal type definition. Returns the created animal type definition"""
         animal_type = AnimalType(name=model.name)
         db.add(animal_type)
@@ -53,7 +60,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return animal_type
 
     async def add_vaccination_to_animal(self,
-                                        model: VaccinationCreate,
+                                        model: VaccinationBase,
                                         animal: Animal,
                                         user: User,
                                         db: AsyncSession) -> Animal:
@@ -70,7 +77,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return animal
 
     async def add_diagnosis_to_animal(self,
-                                      model: DiagnosisCreate,
+                                      model: DiagnosisBase,
                                       animal: Animal,
                                       user: User,
                                       db: AsyncSession) -> Animal:
@@ -86,7 +93,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return animal
 
     async def add_procedure_to_animal(self,
-                                      model: ProcedureCreate,
+                                      model: ProcedureBase,
                                       animal: Animal,
                                       user: User,
                                       db: AsyncSession) -> Animal:
@@ -102,13 +109,13 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return animal
 
     async def add_media_to_animal(self,
-                                  media: MediaAsset,
+                                  definition: MediaAsset,
                                   animal: Animal,
                                   user: User,
                                   db: AsyncSession) -> Animal:
         """Adds a media to animal. Returns the updated animal"""
         user = await db.merge(user)
-        animal.media.append(media)
+        animal.media.append(definition)
         animal.updated_by = user
         await db.commit()
         await db.refresh(animal)
@@ -128,15 +135,15 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return animal
 
     async def add_animal_location(self,
-                                  model:AnimalLocationCreate,
-                                  location:Location,
+                                  definition:Location,
+                                  model:AnimalLocationBase,
                                   animal: Animal,
                                   user: User,
                                   db: AsyncSession) -> Animal:
         """Adds the animal location. Returns the updated animal"""
         user = await db.merge(user)
         animal_location = AnimalLocation(animal=animal,
-                                         location=location,
+                                         location=definition,
                                          date_from=model.date_from,
                                          date_to=model.date_to)
         animal.locations.append(animal_location)
@@ -229,9 +236,9 @@ class AnimalsRepository(metaclass=SingletonMeta):
                             query: str | None = None,
                             arrival_date: date | None = None,
                             city: str | None = None,
-                            animal_types: List[UUID] | None = None,
+                            animal_types: List[int] | None = None,
                             gender: Gender | None = None,
-                            current_locations: List[UUID] | None = None,
+                            current_locations: List[int] | None = None,
                             animal_state: AnimalState | None = None,
                             is_microchpped: bool | None = None,
                             microchpping_date: date | None = None,
@@ -282,7 +289,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         animals = result.unique().scalars().all()
         return list(animals)
 
-    async def read_animal_type(self, animal_type_id: uuid.UUID, db: AsyncSession) -> AnimalType | None:
+    async def read_animal_type(self, animal_type_id: int, db: AsyncSession) -> AnimalType | None:
         """Reads an animal type by id. Returns the retrieved animal type"""
         statement = select(AnimalType)
         statement = statement.filter_by(id=animal_type_id)
@@ -295,7 +302,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         result = await db.execute(statement)
         return result.unique().scalars().all()
 
-    async def read_location(self, location_id: uuid.UUID, db: AsyncSession) -> Location | None:
+    async def read_location(self, location_id: int, db: AsyncSession) -> Location | None:
         """Reads a location by id. Returns the retrieved location"""
         statement = select(Location)
         statement = statement.filter_by(id=location_id)
@@ -315,6 +322,114 @@ class AnimalsRepository(metaclass=SingletonMeta):
             await db.commit()
         return animal
 
+    async def update_animal_fields(self,
+                                   update_model: BaseModel,
+                                   model: Animal,
+                                   user: User,
+                                   db: AsyncSession,
+                                  ) -> Animal:
+        """Updates simple animal fields. Returns the updated animal"""
+        if model:
+            user = await db.merge(user)
+            for field_name in update_model.model_fields:
+                field = getattr(update_model, field_name, None)
+                if isinstance(field, UUIDReferenceBase):
+                    continue
+                if isinstance(field, IntReferenceBase):
+                    setattr(model, f"{field_name}_id", field.id)
+                else:
+                    setattr(model, field_name, field)
+            model.updated_by = user
+            db.add(model)
+            await db.commit()
+            await db.refresh(model)
+        return model
+
+    async def update_animal_location(self,
+                                     update_model: AnimalLocationUpdate,
+                                     definition: Location,
+                                     model: AnimalLocation,
+                                     user: User,
+                                     db: AsyncSession,
+                                    ) -> Animal:
+        """Updates animal location. Returns the updated animal"""
+        if model:
+            user = await db.merge(user)
+            if update_model.date_from:
+                model.date_from = update_model.date_from
+            if update_model.date_to:
+                model.date_to = update_model.date_to
+            model.location = definition
+            model.animal.updated_by = user
+            db.add(model)
+            await db.commit()
+            await db.refresh(model)
+        return model.animal
+
+    async def update_vaccination(self,
+                                 update_model: VaccinationUpdate,
+                                 model: Vaccination,
+                                 user: User,
+                                 db: AsyncSession,
+                                ) -> Animal:
+        """Updates animal vaccination. Returns the updated animal"""
+        if model:
+            user = await db.merge(user)
+            if update_model.date:
+                model.date = update_model.date
+            if update_model.is_vaccinated is not None:
+                model.is_vaccinated = update_model.is_vaccinated
+            if update_model.vaccine_type:
+                model.vaccine_type = update_model.vaccine_type
+            if update_model.comment:
+                model.comment = update_model.comment
+            model.animal.updated_by = user
+            db.add(model)
+            await db.commit()
+            await db.refresh(model)
+        return model.animal
+
+    async def update_procedure(self,
+                               update_model: ProcedureUpdate,
+                               model: Procedure,
+                               user: User,
+                               db: AsyncSession,
+                              ) -> Animal:
+        """Updates animal procedure. Returns the updated animal"""
+        if model:
+            user = await db.merge(user)
+            if update_model.date:
+                model.date = update_model.date
+            if update_model.name:
+                model.name = update_model.name
+            if update_model.comment:
+                model.comment = update_model.comment
+            model.animal.updated_by = user
+            db.add(model)
+            await db.commit()
+            await db.refresh(model)
+        return model.animal
+
+    async def update_diagnosis(self,
+                               update_model: DiagnosisUpdate,
+                               model: Diagnosis,
+                               user: User,
+                               db: AsyncSession,
+                              ) -> Animal:
+        """Updates animal diagnosis. Returns the updated animal"""
+        if model:
+            user = await db.merge(user)
+            if update_model.date:
+                model.date = update_model.date
+            if update_model.name:
+                model.name = update_model.name
+            if update_model.comment:
+                model.comment = update_model.comment
+            model.animal.updated_by = user
+            db.add(model)
+            await db.commit()
+            await db.refresh(model)
+        return model.animal
 
 
 animals_repository:AnimalsRepository = AnimalsRepository()
