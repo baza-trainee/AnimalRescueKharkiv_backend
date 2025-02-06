@@ -386,3 +386,9 @@ class Sorting(BaseModel):
         if not re.match(SORTING_VALIDATION_REGEX, value):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.crm_illegal_sort)
         return value
+
+
+class EditingLockResponse(BaseModel):
+    user: UserEmail
+    section_name: str
+    animal_id: SixDigitID
