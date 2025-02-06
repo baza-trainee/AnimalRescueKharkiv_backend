@@ -39,5 +39,7 @@ class ReturnMessages:
     crm_lock_not_found: str = "Section '%s' is not locked by user '%s'"
     crm_acquire_lock_failed: str = "Failed to acquire lock on '%s' section for '%s' user"
 
+    date_not_past_present: str = "Date must be in the past or today"
+
 
 RETURN_MSG = ReturnMessages()

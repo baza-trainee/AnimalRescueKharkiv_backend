@@ -7,7 +7,7 @@ import uvicorn
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_limiter.depends import RateLimiter
-from pydantic import PastDate, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
@@ -27,6 +27,7 @@ from src.crm.schemas import (
     LocationBase,
     LocationResponse,
     NamedSection,
+    PastOrPresentDate,
     Sorting,
 )
 from src.crm.strategies import update_handler
@@ -44,29 +45,29 @@ locations_router_cache: Cache = Cache(owner=router, all_prefix="locations", ttl=
 @router.get(settings.animals_prefix,  response_model=List[AnimalResponse])
 async def read_animals( query: str  | None = Query(default=None,
                                 description="Search query with names or IDs. Default: None"),
-                        arrival_date: PastDate | None = Query(default=None,
+                        arrival_date: PastOrPresentDate | None = Query(default=None,
                                                               description="Arrival date. Default: None"),
                         city: str | None = Query(default=None,
                                 description="City of collection. Default: None"),
                         animal_types: List[int] | None = Query(default=None,
                                 description="List of animal type IDs. Default: None"),
                         gender: Gender | None = Query(default=None,
-                                description="Animal gender ('male', 'female'). Default: 'male'"),
+                                description="Animal gender ('male', 'female'). Default: 'None'"),
                         current_locations: List[int] | None = Query(default=None,
                                 description="List of location IDs. Default: None"),
                         animal_state: AnimalState | None = Query(default=AnimalState.active,
                                 description="State of animal ('active', 'dead', 'adopted'). Default: 'active'"),
                         is_microchpped: bool | None = Query(default=None,
-                                description="Is microchppied? Default: True"),
-                        microchpping_date: PastDate | None = Query(default=None,
+                                description="Is microchppied? Default: None"),
+                        microchpping_date: PastOrPresentDate | None = Query(default=None,
                                 description="Microchipping date. Default: None"),
                         is_sterilized: bool | None = Query(default=None,
-                                description="Is sterilized? Default: True"),
-                        sterilization_date: PastDate | None = Query(default=None,
+                                description="Is sterilized? Default: None"),
+                        sterilization_date: PastOrPresentDate | None = Query(default=None,
                                 description="Sterilization date. Default: None"),
                         is_vaccinated: bool | None = Query(default=None,
-                                description="Is vaccinated? Default: True"),
-                        vaccination_date: PastDate | None = Query(default=None,
+                                description="Is vaccinated? Default: None"),
+                        vaccination_date: PastOrPresentDate | None = Query(default=None,
                                 description="Vaccination date. Default: None"),
                         skip: int | None = Query(default=0, ge=0,
                                 description="Records to skip in response"),

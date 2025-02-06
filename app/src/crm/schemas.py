@@ -1,22 +1,22 @@
 # mypy: disable-error-code="assignment"
 import enum
 import re
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Callable, ClassVar, List, Optional, Type
 
 from fastapi import HTTPException, Query, status
 from pydantic import (
-        UUID4,
-        BaseModel,
-        ConfigDict,
-        Field,
-        PastDate,
-        PlainSerializer,
-        Strict,
-        computed_field,
-        field_validator,
-        model_serializer,
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    PlainValidator,
+    Strict,
+    computed_field,
+    field_validator,
+    model_serializer,
 )
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from src.base_schemas import IntReferenceBase, ResponseReferenceBase, UUIDReferenceBase
@@ -28,6 +28,16 @@ from src.users.schemas import UserResponse
 
 SixDigitID = Annotated[int, PlainSerializer(lambda x: str(x).zfill(6), return_type=str)]
 UserEmail = Annotated[UserResponse, PlainSerializer(lambda x: x.email, return_type=str)]
+
+def validate_past_or_present(value: date) -> date:
+    """Validates value for past or present date"""
+    if isinstance(value, str):
+        value = date.fromisoformat(value)
+    if value > datetime.now().date():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
+    return value
+
+PastOrPresentDate = Annotated[date, PlainValidator(validate_past_or_present)]
 SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class DynamicSection(BaseModel):
@@ -125,26 +135,26 @@ class AnimalTypeBase(BaseModel):
 
 class AnimalLocationBase(BaseModel):
     location: IntReferenceBase
-    date_from: PastDate
-    date_to: Optional[PastDate] = None
+    date_from: PastOrPresentDate
+    date_to: Optional[PastOrPresentDate] = None
 
 
 class VaccinationBase(BaseModel):
     is_vaccinated: bool
     vaccine_type: Optional[str] = Field(default=None, max_length=100)
-    date: Optional[PastDate] = None
+    date: Optional[PastOrPresentDate] = None
     comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class DiagnosisBase(BaseModel):
     name: Optional[str] = Field(default=None, max_length=100)
-    date: Optional[PastDate] = None
+    date: Optional[PastOrPresentDate] = None
     comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class ProcedureBase(BaseModel):
     name: Optional[str] = Field(default=None, max_length=100)
-    date: Optional[PastDate] = None
+    date: Optional[PastOrPresentDate] = None
     comment: Optional[str] = Field(default=None, max_length=500)
 
 
@@ -250,12 +260,12 @@ class NamedSection:
 
 class AnimalNameUpdate(BaseModel, NamedSection):
     _section_name = "name"
-    name: str = Field(min_length=2, max_length=30, pattern=r"^[a-zA-Zа-яА-ЯїЇ'’\-\s]+$")
+    name: str = Field(min_length=2, max_length=30, pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")
 
 
 class OriginUpdate(BaseModel, NamedSection):
     _section_name = "origin"
-    origin__arrival_date: PastDate
+    origin__arrival_date: PastOrPresentDate
     origin__city: str = Field(max_length=100)
     origin__address: Optional[str] = Field(default=None, max_length=100)
 
@@ -283,28 +293,28 @@ class AdoptionUpdate(BaseModel, NamedSection):
     _section_name = "adoption"
     adoption__country: Optional[str] = Field(default=None, max_length=50)
     adoption__city: Optional[str] = Field(default=None, max_length=50)
-    adoption__date: Optional[PastDate] = None
+    adoption__date: Optional[PastOrPresentDate] = None
     adoption__comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class DeathUpdate(BaseModel, NamedSection):
     _section_name = "death"
     death__dead: Optional[bool] = False
-    death__date: Optional[PastDate] = None
+    death__date: Optional[PastOrPresentDate] = None
     death__comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class SterilizationUpdate(BaseModel, NamedSection):
     _section_name = "sterilization"
     sterilization__done: Optional[bool] = None
-    sterilization__date: Optional[PastDate] = None
+    sterilization__date: Optional[PastOrPresentDate] = None
     sterilization__comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class MicrochippingUpdate(BaseModel, NamedSection):
     _section_name = "microchipping"
     microchipping__done: Optional[bool] = None
-    microchipping__date: Optional[PastDate] = None
+    microchipping__date: Optional[PastOrPresentDate] = None
     microchipping__comment: Optional[str] = Field(default=None, max_length=500)
 
 
