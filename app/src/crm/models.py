@@ -2,7 +2,7 @@ import enum
 from typing import TYPE_CHECKING, List
 from uuid import uuid4
 
-from sqlalchemy import UUID, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, func
+from sqlalchemy import UUID, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.configuration.db import Base
@@ -145,3 +145,13 @@ class Procedure(Base):
     name: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
+
+class EditingLock(Base):
+    __tablename__ = "crm_editing_locks"
+    id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
+    animal: Mapped["Animal"] = relationship("Animal", lazy="joined")
+    user_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("users.id"), nullable=False)
+    user: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[user_id])
+    section_name: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now(), index=True)
