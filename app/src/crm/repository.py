@@ -13,7 +13,17 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from sqlalchemy.sql.elements import UnaryExpression
 from src.configuration.settings import settings
-from src.crm.models import Animal, AnimalLocation, AnimalType, Diagnosis, Gender, Location, Procedure, Vaccination
+from src.crm.models import (
+    Animal,
+    AnimalLocation,
+    AnimalType,
+    Diagnosis,
+    EditingLock,
+    Gender,
+    Location,
+    Procedure,
+    Vaccination,
+)
 from src.crm.schemas import (
     SORTING_VALIDATION_REGEX,
     AnimalCreate,
@@ -431,5 +441,41 @@ class AnimalsRepository(metaclass=SingletonMeta):
             await db.refresh(model)
         return model.animal
 
+    async def read_editing_lock(self,
+                                animal_id: int,
+                                section_name: str,
+                                db: AsyncSession,
+                               ) -> EditingLock | None:
+        """Reads an editing lock by animal id and section name. Returns the retrieved lock record"""
+        statement = select(EditingLock)
+        statement = statement.filter_by(animal_id=animal_id, section_name=section_name)
+        result = await db.execute(statement)
+        return result.unique().scalar_one_or_none()
+
+    async def create_editing_lock(self,
+                                animal_id: int,
+                                section_name: str,
+                                user: User,
+                                db: AsyncSession,
+                              ) -> EditingLock:
+        """Creates an editing lock by animal id and section name for the user. Returns the created lock record"""
+        user = await db.merge(user)
+        editing_lock = EditingLock(animal_id=animal_id,
+                                  user=user,
+                                  section_name=section_name)
+        db.add(editing_lock)
+        await db.commit()
+        await db.refresh(editing_lock)
+        return editing_lock
+
+    async def delete_editing_lock(self,
+                                  editing_lock: EditingLock,
+                                  db: AsyncSession,
+                                 ) -> EditingLock:
+        """Deletes editing lock"""
+        if editing_lock:
+            await db.delete(editing_lock)
+            await db.commit()
+        return editing_lock
 
 animals_repository:AnimalsRepository = AnimalsRepository()
