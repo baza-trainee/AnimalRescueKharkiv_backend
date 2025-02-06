@@ -25,6 +25,7 @@ from src.auth.managers import token_manager
 from src.configuration.db import SessionLocal, engine, get_db
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
+from src.crm.managers import editing_lock_manager
 from src.scheduler import Scheduler
 from starlette.templating import _TemplateResponse
 from utils import get_app_routers
@@ -51,6 +52,7 @@ async def __init_data() -> None:
 
 def __init_scheduled_jobs(scheduler: Scheduler) -> None:
     scheduler.schedule_job(token_manager.delete_expired_tokens)
+    scheduler.schedule_job(editing_lock_manager.delete_expired_editing_locks)
 
 
 @asynccontextmanager
