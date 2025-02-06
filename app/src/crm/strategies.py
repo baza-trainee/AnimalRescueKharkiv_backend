@@ -84,13 +84,13 @@ class UpdateRefsStrategy(UpdateStrategy):
     def __init__(self,
                  ref_name: str,
                  add_func: Callable[...,Awaitable[DeclarativeBase]] | None = None,
-                 read_def_func: Callable[[int|UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = None,
+                 read_def_func: Callable[[int | UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = None,
                  update_func: Callable[..., Awaitable[DeclarativeBase]] | None = None,
                 ) -> None:
         """Initializes strategy"""
         self.__ref_name: str = ref_name
         self.__add_func: Callable[...,Awaitable[DeclarativeBase]] | None = add_func
-        self.__read_def_func: Callable[[int|UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = read_def_func
+        self.__read_def_func: Callable[[int | UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = read_def_func
         self.__update_func: Callable[..., Awaitable[DeclarativeBase]] | None = update_func
 
     async def update(self,
