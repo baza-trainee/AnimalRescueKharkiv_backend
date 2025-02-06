@@ -33,6 +33,7 @@ from src.crm.schemas import (
 )
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
+from src.media.repository import media_repository
 from src.singleton import SingletonMeta
 from src.users.models import User
 
@@ -83,13 +84,13 @@ class UpdateRefsStrategy(UpdateStrategy):
     def __init__(self,
                  ref_name: str,
                  add_func: Callable[...,Awaitable[DeclarativeBase]] | None = None,
-                 read_def_func: Callable[[int, AsyncSession], Awaitable[DeclarativeBase]] | None = None,
+                 read_def_func: Callable[[int|UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = None,
                  update_func: Callable[..., Awaitable[DeclarativeBase]] | None = None,
                 ) -> None:
         """Initializes strategy"""
         self.__ref_name: str = ref_name
         self.__add_func: Callable[...,Awaitable[DeclarativeBase]] | None = add_func
-        self.__read_def_func: Callable[[int, AsyncSession], Awaitable[DeclarativeBase]] | None = read_def_func
+        self.__read_def_func: Callable[[int|UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = read_def_func
         self.__update_func: Callable[..., Awaitable[DeclarativeBase]] | None = update_func
 
     async def update(self,
@@ -132,6 +133,9 @@ class UpdateRefsStrategy(UpdateStrategy):
                 field = getattr(update_model, field_name, None)
                 if isinstance(field, UUID):
                     ref_obj = self.__get_ref_by_id(ref_id=field, model=model)
+                    if (self.__read_def_func
+                            and "media_asset_id" in inspect.getfullargspec(self.__read_def_func).args):
+                        definition = await self.__read_def_func(field, db)
                 if isinstance(field, IntReferenceBase) and self.__read_def_func:
                     definition = await self.__read_def_func(field.id, db)
         if ref_obj:
@@ -224,6 +228,7 @@ class UpdateHanlder(metaclass=SingletonMeta):
             "sterilization": UpdateAttrsStrategy(),
             "microchipping": UpdateAttrsStrategy(),
             "media": UpdateRefsStrategy(ref_name="media",
+                                        read_def_func=media_repository.read_media_asset,
                                         add_func=animals_repository.add_media_to_animal),
             "locations": UpdateRefsStrategy(ref_name="locations",
                                             add_func=animals_repository.add_animal_location,
