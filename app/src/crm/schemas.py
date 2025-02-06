@@ -3,7 +3,7 @@ import enum
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Callable, List, Optional
+from typing import Annotated, Callable, ClassVar, List, Optional, Type
 
 from fastapi import HTTPException, Query, status
 from pydantic import (
@@ -19,13 +19,13 @@ from pydantic import (
         model_serializer,
 )
 from sqlalchemy.orm.decl_api import DeclarativeMeta
+from src.base_schemas import IntReferenceBase, ResponseReferenceBase, UUIDReferenceBase
 from src.configuration.settings import settings
 from src.crm.models import Gender
 from src.exceptions.exceptions import RETURN_MSG
-from src.media.schemas import MediaAssetReference, MediaAssetResponse
+from src.media.schemas import MediaAssetResponse
 from src.users.schemas import UserResponse
 
-UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 SixDigitID = Annotated[int, PlainSerializer(lambda x: str(x).zfill(6), return_type=str)]
 UserEmail = Annotated[UserResponse, PlainSerializer(lambda x: x.email, return_type=str)]
 SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
@@ -77,12 +77,12 @@ class DynamicResponse(BaseModel):
         for key, value in instance_data.items():
             if "__" in key and len(key.split("__")) == 2: #noqa: PLR2004
                 try:
-                    section, field_name = key.split("__", 1)
+                    section, _ = key.split("__", 1)
                 except ValueError:
                     continue
                 if section not in structured_data:
                     structured_data[section] = {}
-                structured_data[section][field_name] = value
+                structured_data[section][key] = value
             else:
                 structured_data[key] = value
         return structured_data
@@ -115,13 +115,6 @@ class DynamicResponse(BaseModel):
         return self._authorizable_attributes
 
 
-class ReferenceBase(BaseModel):
-    id: Annotated[UUID4, Strict(strict=False)]
-
-class ResponseReferenceBase(BaseModel):
-    id: UUIDString
-
-
 class LocationBase(BaseModel):
     name: str
 
@@ -131,7 +124,7 @@ class AnimalTypeBase(BaseModel):
 
 
 class AnimalLocationBase(BaseModel):
-    location: ReferenceBase
+    location: IntReferenceBase
     date_from: PastDate
     date_to: Optional[PastDate] = None
 
@@ -155,11 +148,11 @@ class ProcedureBase(BaseModel):
     comment: Optional[str] = Field(default=None, max_length=500)
 
 
-class AnimalTypeResponse(AnimalTypeBase, ResponseReferenceBase):
+class AnimalTypeResponse(AnimalTypeBase, IntReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class LocationResponse(LocationBase, ResponseReferenceBase):
+class LocationResponse(LocationBase, IntReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
 class AnimalLocationResponse(AnimalLocationBase, ResponseReferenceBase):
@@ -227,95 +220,154 @@ class AnimalResponse(DynamicResponse):
     procedures: Optional[List[ProcedureResponse]] = AuthorizableField(default=None)
 
 
-class AnimalTypeCreate(AnimalTypeBase):
+class AnimalLocationUpdate(AnimalLocationBase, UUIDReferenceBase):
     pass
 
-
-class LocationCreate(LocationBase):
+class VaccinationUpdate(VaccinationBase, UUIDReferenceBase):
     pass
 
-
-class AnimalLocationCreate(AnimalLocationBase):
+class DiagnosisUpdate(DiagnosisBase, UUIDReferenceBase):
     pass
 
-
-class VaccinationCreate(VaccinationBase):
+class ProcedureUpdate(ProcedureBase, UUIDReferenceBase):
     pass
 
+class NamedSection:
+    _section_name: ClassVar[str]
 
-class DiagnosisCreate(DiagnosisBase):
-    pass
+    @classmethod
+    def get_section_name(cls) -> str:
+        """Gets section name"""
+        return cls._section_name
 
+    @classmethod
+    def get_section_by_name(cls, section_name: str) -> Optional[Type[BaseModel]]:
+        """Gets subclass section type by section name. Returns resolved type"""
+        for section_model in cls.__subclasses__():
+            if issubclass(section_model, BaseModel) and section_model.get_section_name() == section_name:
+                return section_model
+        return None
 
-class ProcedureCreate(ProcedureBase):
-    pass
-
-
-class AnimalName(BaseModel):
+class AnimalNameUpdate(BaseModel, NamedSection):
+    _section_name = "name"
     name: str = Field(min_length=2, max_length=30, pattern=r"^[a-zA-Zа-яА-ЯїЇ'’\-\s]+$")
 
 
-class OriginBase(BaseModel):
+class OriginUpdate(BaseModel, NamedSection):
+    _section_name = "origin"
     origin__arrival_date: PastDate
     origin__city: str = Field(max_length=100)
     origin__address: Optional[str] = Field(default=None, max_length=100)
 
 
-class GeneralBase(BaseModel):
-    general__animal_type: ReferenceBase
+class GeneralUpdate(BaseModel, NamedSection):
+    _section_name = "general"
+    general__animal_type: Optional[IntReferenceBase] = Field(default=None)
     general__gender: Gender = Gender.male
     general__weight: Optional[float] = Field(default=None, ge=0.0)
     general__age: Optional[float] = Field(default=None, le=100.0)
     general__specials: Optional[str] = Field(default=None, max_length=200)
 
 
-class OwnerBase(BaseModel):
+class OwnerUpdate(BaseModel, NamedSection):
+    _section_name = "owner"
     owner__info: Optional[str] = Field(default=None, max_length=500)
 
 
-class CommentBase(BaseModel):
+class CommentUpdate(BaseModel, NamedSection):
+    _section_name = "comment"
     comment__text: Optional[str] = Field(default=None, max_length=1000)
 
 
-class AdoptionBase(BaseModel):
+class AdoptionUpdate(BaseModel, NamedSection):
+    _section_name = "adoption"
     adoption__country: Optional[str] = Field(default=None, max_length=50)
     adoption__city: Optional[str] = Field(default=None, max_length=50)
     adoption__date: Optional[PastDate] = None
     adoption__comment: Optional[str] = Field(default=None, max_length=500)
 
 
-class DeathBase(BaseModel):
-    death__dead: Optional[bool] = None
+class DeathUpdate(BaseModel, NamedSection):
+    _section_name = "death"
+    death__dead: Optional[bool] = False
     death__date: Optional[PastDate] = None
     death__comment: Optional[str] = Field(default=None, max_length=500)
 
 
-class SterilizationBase(BaseModel):
+class SterilizationUpdate(BaseModel, NamedSection):
+    _section_name = "sterilization"
     sterilization__done: Optional[bool] = None
     sterilization__date: Optional[PastDate] = None
     sterilization__comment: Optional[str] = Field(default=None, max_length=500)
 
 
-class MicrochippingBase(BaseModel):
+class MicrochippingUpdate(BaseModel, NamedSection):
+    _section_name = "microchipping"
     microchipping__done: Optional[bool] = None
     microchipping__date: Optional[PastDate] = None
     microchipping__comment: Optional[str] = Field(default=None, max_length=500)
 
 
-class AnimalCreate(AnimalName,
-                   OriginBase,
-                   GeneralBase,
-                   OwnerBase,
-                   CommentBase,
-                   AdoptionBase,
-                   DeathBase,
-                   SterilizationBase,
-                   MicrochippingBase):
-    media: Optional[List[MediaAssetReference]] = None
-    locations: Optional[List[AnimalLocationCreate]] = None
-    vaccinations: Optional[List[VaccinationCreate]] = None
-    diagnoses: Optional[List[DiagnosisCreate]] = None
-    procedures: Optional[List[ProcedureCreate]] = None
+class MediaUpdate(BaseModel, NamedSection):
+    _section_name = "media"
+    media: Optional[List[UUIDReferenceBase]] = None
+
+class LocationsUpdate(BaseModel, NamedSection):
+    _section_name = "locations"
+    locations: Optional[List[AnimalLocationUpdate]] = None
+
+
+class VaccinationsUpdate(BaseModel, NamedSection):
+    _section_name = "vaccinations"
+    vaccinations: Optional[List[VaccinationUpdate]] = None
+
+
+class DiagnosesUpdate(BaseModel, NamedSection):
+    _section_name = "diagnoses"
+    diagnoses: Optional[List[DiagnosisUpdate]] = None
+
+
+class ProceduresUpdate(BaseModel, NamedSection):
+    _section_name = "procedures"
+    procedures: Optional[List[ProcedureUpdate]] = None
+
+
+class LocationsCreate(BaseModel):
+    locations: Optional[List[AnimalLocationBase]] = None
+
+
+class VaccinationsCreate(BaseModel):
+    vaccinations: Optional[List[VaccinationBase]] = None
+
+
+class DiagnosesCreate(BaseModel):
+    diagnoses: Optional[List[DiagnosisBase]] = None
+
+
+class ProceduresCreate(BaseModel):
+    procedures: Optional[List[ProcedureBase]] = None
+
+
+
+class GeneralCreate(GeneralUpdate):
+    general__animal_type: IntReferenceBase = Field()
+
+
+class AnimalCreate(ProceduresUpdate,
+                   DiagnosesUpdate,
+                   VaccinationsUpdate,
+                   LocationsUpdate,
+                   MediaUpdate,
+                   MicrochippingUpdate,
+                   SterilizationUpdate,
+                   DeathUpdate,
+                   AdoptionUpdate,
+                   CommentUpdate,
+                   OwnerUpdate,
+                   GeneralCreate,
+                   OriginUpdate,
+                   AnimalNameUpdate):
+    pass
 
 
 class AnimalState(enum.Enum):
