@@ -1,9 +1,9 @@
 import logging
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable, List, Optional, Type
 from uuid import UUID
 
 import uvicorn
-from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_limiter.depends import RateLimiter
 from pydantic import PastDate, ValidationError
@@ -13,19 +13,21 @@ from sqlalchemy.orm import DeclarativeBase
 from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
-from src.crm.models import AnimalType, Gender, Location
+from src.crm.models import Animal, AnimalType, Gender, Location
 from src.crm.repository import animals_repository
 from src.crm.schemas import (
     AnimalCreate,
     AnimalResponse,
     AnimalState,
-    AnimalTypeCreate,
+    AnimalTypeBase,
     AnimalTypeResponse,
     BaseModel,
-    LocationCreate,
+    LocationBase,
     LocationResponse,
+    NamedSection,
     Sorting,
 )
+from src.crm.strategies import update_handler
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
 from src.services.cache import Cache
@@ -44,11 +46,11 @@ async def read_animals( query: str  | None = Query(default=None,
                                                               description="Arrival date. Default: None"),
                         city: str | None = Query(default=None,
                                 description="City of collection. Default: None"),
-                        animal_types: List[UUID] | None = Query(default=None,
+                        animal_types: List[int] | None = Query(default=None,
                                 description="List of animal type IDs. Default: None"),
                         gender: Gender | None = Query(default=None,
                                 description="Animal gender ('male', 'female'). Default: 'male'"),
-                        current_locations: List[UUID] | None = Query(default=None,
+                        current_locations: List[int] | None = Query(default=None,
                                 description="List of location IDs. Default: None"),
                         animal_state: AnimalState | None = Query(default=AnimalState.active,
                                 description="State of animal ('active', 'dead', 'adopted'). Default: 'active'"),
@@ -152,7 +154,7 @@ async def read_locations(db: AsyncSession = Depends(get_db)) -> List[LocationRes
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def create_locations(models: List[LocationCreate],
+async def create_locations(models: List[LocationBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user, scopes=["location:write"]),
                     ) -> List[LocationResponse]:
@@ -194,7 +196,7 @@ async def read_animal_types(db: AsyncSession = Depends(get_db)) -> List[AnimalTy
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def create_animal_types(models: List[AnimalTypeCreate],
+async def create_animal_types(models: List[AnimalTypeBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
                     ) -> List[AnimalTypeResponse]:
@@ -217,21 +219,6 @@ async def create_animal_types(models: List[AnimalTypeCreate],
     return animal_types
 
 
-async def __add_references(model: DeclarativeBase,
-                           references: List[BaseModel],
-                           func: Callable[..., Awaitable[DeclarativeBase]],
-                           user: User,
-                           db: AsyncSession,
-                           ) -> DeclarativeBase:
-    if references:
-        for ref_model in references:
-            model = await func(
-                model=ref_model,
-                animal=model,
-                user=user,
-                db=db)
-    return model
-
 @router.post(settings.animals_prefix, response_model=AnimalResponse, status_code=status.HTTP_201_CREATED,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
@@ -252,35 +239,31 @@ async def create_animal(model: AnimalCreate,
                                                           animal=animal,
                                                           user=current_user,
                                                           db=db)
-        if model.locations:
-            for location_model in model.locations:
-                location = await animals_repository.read_location(location_id=location_model.location.id, db=db)
-                if location:
-                    animal = await animals_repository.add_animal_location(model=location_model,
-                                                                          location=location,
-                                                                          animal=animal,
-                                                                          user=current_user,
-                                                                          db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.vaccinations,
-                                        func=animals_repository.add_vaccination_to_animal,
-                                        user=current_user,
-                                        db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.diagnoses,
-                                        func=animals_repository.add_diagnosis_to_animal,
-                                        user=current_user,
-                                        db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.procedures,
-                                        func=animals_repository.add_procedure_to_animal,
-                                        user=current_user,
-                                        db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.media,
-                                        func=animals_repository.add_media_to_animal,
-                                        user=current_user,
-                                        db=db)
+        animal = await update_handler.handle_update(section_name="locations",
+                                                        model=animal,
+                                                        update_model=model.locations,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="vaccinations",
+                                                        model=animal,
+                                                        update_model=model.vaccinations,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="diagnoses",
+                                                        model=animal,
+                                                        update_model=model.diagnoses,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="procedures",
+                                                        model=animal,
+                                                        update_model=model.procedures,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="media",
+                                                        model=animal,
+                                                        update_model=model.media,
+                                                        user=current_user,
+                                                        db=db)
 
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
@@ -306,3 +289,34 @@ async def delete_animal(animal_id: int,
     await animals_repository.delete_animal(animal=animal, db=db)
     await animals_router_cache.invalidate_key(key=cache_key)
     await animals_router_cache.invalidate_all_keys()
+
+
+@router.put(settings.animals_prefix + "/{animal_id}/{section_name}",
+            description=settings.rate_limiter_description,
+            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
+                                              seconds=settings.rate_limiter_seconds))])
+async def update_animal_section(animal_id: int,
+                                section_name: str,
+                                body: dict = Body(),
+                                db: AsyncSession = Depends(get_db),
+                                current_user: User = Security(authorization_service.authorize_user_for_section,
+                                                              scopes=["animal:read", "animal:write"]),
+                                ) -> AnimalResponse:
+    """Updates animal object baased on JSON body. Returns updated animal"""
+    animal:Animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
+    if not animal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
+    section_model: BaseModel = None
+    section_model_type: Optional[Type[BaseModel]] = NamedSection.get_section_by_name(section_name=section_name)
+    if section_model_type:
+        section_model = section_model_type.model_validate(body)
+        if section_model:
+            animal = await update_handler.handle_update(section_name=section_name,
+                                                        model=animal,
+                                                        update_model=section_model,
+                                                        user=current_user,
+                                                        db=db)
+            cache_key = animals_router_cache.get_cache_key(str(animal_id))
+            await animals_router_cache.invalidate_key(key=cache_key)
+            await animals_router_cache.invalidate_all_keys()
+    return AnimalResponse.model_validate(animal)
