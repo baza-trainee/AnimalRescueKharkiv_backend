@@ -6,9 +6,8 @@ from pydantic import (
     ConfigDict,
     PlainSerializer,
 )
+from src.base_schemas import ResponseReferenceBase
 from src.configuration.settings import settings
-
-UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 
 
 class PermissionBase(BaseModel):
@@ -17,9 +16,7 @@ class PermissionBase(BaseModel):
     title: Optional[str] = None
 
 
-class PermissionResponse(PermissionBase):
-    id: UUIDString
-
+class PermissionResponse(PermissionBase, ResponseReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
 class PermissionUpdate(BaseModel):
