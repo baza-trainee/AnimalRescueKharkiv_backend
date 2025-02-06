@@ -36,6 +36,8 @@ class ReturnMessages:
     crm_animal_not_found: str = "Animal not found"
     crm_location_not_found: str = "Location not found"
     crm_illegal_sort: str = "Sort expression should be in format {field}|{direction}"
+    crm_lock_not_found: str = "Section '%s' is not locked by user '%s'"
+    crm_acquire_lock_failed: str = "Failed to acquire lock on '%s' section for '%s' user"
 
 
 RETURN_MSG = ReturnMessages()
