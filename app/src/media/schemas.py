@@ -16,12 +16,7 @@ class MediaAssetInfo(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-class MediaAssetResponse(ResponseReferenceBase):
-    extension: str
-    content_type: str
-    created_at: datetime
-    updated_at: datetime
-
+class MediaAssetResponse(MediaAssetInfo, ResponseReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
     @computed_field
