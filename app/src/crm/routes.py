@@ -213,7 +213,7 @@ async def read_animal_types(db: AsyncSession = Depends(get_db)) -> List[AnimalTy
         logger.exception("An error occured:\n")
         raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if not anymal_types:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_type_not_found)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_type_not_found)
     return anymal_types
 
 
