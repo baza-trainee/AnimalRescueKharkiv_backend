@@ -93,7 +93,7 @@
           Authorization: "Bearer " + securityToken,
         },
       }).then((response) => {
-        if (response.ok) {
+        if (response.ok || response.status == 401 || response.status == 422) {
           // Clear the token from Swagger UI
           originalLogout(security);
           authorized_domain = "";

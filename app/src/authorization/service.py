@@ -34,6 +34,20 @@ class Authorization(metaclass=SingletonMeta):
             current_security_token: SecurityToken = Depends(auth_service.get_access_token),
             ) -> User:
         """Authorizes user access. Returns the authorized user"""
+        return await self.__do_authorize_user(scopes=scopes,
+                                        current_security_token=current_security_token)
+
+    async def authorize_user_for_section(
+            self, section_name: str,
+            scopes: SecurityScopes,
+            current_security_token: SecurityToken = Depends(auth_service.get_access_token),
+            ) -> User:
+        """Authorizes user access for specific named data section. Returns the authorized user"""
+        scopes.scopes.append(f"{section_name}:write")
+        return await self.__do_authorize_user(scopes=scopes,
+                                        current_security_token=current_security_token)
+
+    async def __do_authorize_user(self, scopes: SecurityScopes, current_security_token: SecurityToken) -> User:
         permissions: List[str] = auth_service.get_permissions_from_token(current_security_token.token)
         required_permissions: set = set(scopes.scopes)
         user: User = current_security_token.user
