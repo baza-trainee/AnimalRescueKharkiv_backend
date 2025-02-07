@@ -2,8 +2,9 @@ import re
 from typing import Optional
 
 from pydantic import UUID4, BaseModel, ConfigDict, EmailStr, field_validator
+from src.base_schemas import ResponseReferenceBase
 from src.configuration.settings import settings
-from src.media.schemas import MediaAssetReference, MediaAssetResponse
+from src.media.schemas import MediaAssetResponse, UUIDReferenceBase
 from src.roles.schemas import RoleBase, RoleResponse
 
 
@@ -34,7 +35,7 @@ class UserCreate(UserBase, UserExt):
     validate_password = field_validator("password")(validate_password)
 
 
-class UserResponse(UserBase, UserExt):
+class UserResponse(UserBase, UserExt, ResponseReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -43,7 +44,7 @@ class UserUpdate(UserExt):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
-    photo: Optional[MediaAssetReference] = None
+    photo: Optional[UUIDReferenceBase] = None
 
 
 class UserPasswordUpdate(BaseModel):

@@ -1,31 +1,36 @@
 import logging
-from typing import Awaitable, Callable, List
+from datetime import datetime, timedelta, timezone
+from typing import Awaitable, Callable, List, Optional, Type
 from uuid import UUID
 
 import uvicorn
-from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_limiter.depends import RateLimiter
-from pydantic import PastDate, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
-from src.crm.models import AnimalType, Gender, Location
+from src.crm.models import Animal, AnimalType, Gender, Location
 from src.crm.repository import animals_repository
 from src.crm.schemas import (
     AnimalCreate,
     AnimalResponse,
     AnimalState,
-    AnimalTypeCreate,
+    AnimalTypeBase,
     AnimalTypeResponse,
     BaseModel,
-    LocationCreate,
+    EditingLockResponse,
+    LocationBase,
     LocationResponse,
+    NamedSection,
+    PastOrPresentDate,
     Sorting,
 )
+from src.crm.strategies import update_handler
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
 from src.services.cache import Cache
@@ -40,29 +45,29 @@ locations_router_cache: Cache = Cache(owner=router, all_prefix="locations", ttl=
 @router.get(settings.animals_prefix,  response_model=List[AnimalResponse])
 async def read_animals( query: str  | None = Query(default=None,
                                 description="Search query with names or IDs. Default: None"),
-                        arrival_date: PastDate | None = Query(default=None,
+                        arrival_date: PastOrPresentDate | None = Query(default=None,
                                                               description="Arrival date. Default: None"),
                         city: str | None = Query(default=None,
                                 description="City of collection. Default: None"),
-                        animal_types: List[UUID] | None = Query(default=None,
+                        animal_types: List[int] | None = Query(default=None,
                                 description="List of animal type IDs. Default: None"),
                         gender: Gender | None = Query(default=None,
-                                description="Animal gender ('male', 'female'). Default: 'male'"),
-                        current_locations: List[UUID] | None = Query(default=None,
+                                description="Animal gender ('male', 'female'). Default: 'None'"),
+                        current_locations: List[int] | None = Query(default=None,
                                 description="List of location IDs. Default: None"),
                         animal_state: AnimalState | None = Query(default=AnimalState.active,
                                 description="State of animal ('active', 'dead', 'adopted'). Default: 'active'"),
                         is_microchpped: bool | None = Query(default=None,
-                                description="Is microchppied? Default: True"),
-                        microchpping_date: PastDate | None = Query(default=None,
+                                description="Is microchppied? Default: None"),
+                        microchpping_date: PastOrPresentDate | None = Query(default=None,
                                 description="Microchipping date. Default: None"),
                         is_sterilized: bool | None = Query(default=None,
-                                description="Is sterilized? Default: True"),
-                        sterilization_date: PastDate | None = Query(default=None,
+                                description="Is sterilized? Default: None"),
+                        sterilization_date: PastOrPresentDate | None = Query(default=None,
                                 description="Sterilization date. Default: None"),
                         is_vaccinated: bool | None = Query(default=None,
-                                description="Is vaccinated? Default: True"),
-                        vaccination_date: PastDate | None = Query(default=None,
+                                description="Is vaccinated? Default: None"),
+                        vaccination_date: PastOrPresentDate | None = Query(default=None,
                                 description="Vaccination date. Default: None"),
                         skip: int | None = Query(default=0, ge=0,
                                 description="Records to skip in response"),
@@ -91,25 +96,29 @@ async def read_animals( query: str  | None = Query(default=None,
     )
     animals: List[AnimalResponse] = await animals_router_cache.get(key=cache_key)
     if not animals:
-        animals = await animals_repository.read_animals(
-            query=query,
-            arrival_date=arrival_date,
-            city=city,
-            animal_types=animal_types,
-            gender=gender,
-            current_locations=current_locations,
-            animal_state=animal_state,
-            is_microchpped=is_microchpped,
-            microchpping_date=microchpping_date,
-            is_sterilized=is_sterilized,
-            sterilization_date=sterilization_date,
-            is_vaccinated=is_vaccinated,
-            vaccination_date=vaccination_date,
-            skip=skip,
-            limit=limit,
-            sort=sorting.sort,
-            db=db)
-        animals = [AnimalResponse.model_validate(animal) for animal in animals]
+        try:
+            animals = await animals_repository.read_animals(
+                query=query,
+                arrival_date=arrival_date,
+                city=city,
+                animal_types=animal_types,
+                gender=gender,
+                current_locations=current_locations,
+                animal_state=animal_state,
+                is_microchpped=is_microchpped,
+                microchpping_date=microchpping_date,
+                is_sterilized=is_sterilized,
+                sterilization_date=sterilization_date,
+                is_vaccinated=is_vaccinated,
+                vaccination_date=vaccination_date,
+                skip=skip,
+                limit=limit,
+                sort=sorting.sort,
+                db=db)
+            animals = [AnimalResponse.model_validate(animal) for animal in animals]
+        except Exception as err:
+            logger.exception("An error occured:\n")
+            raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
         if animals:
             await animals_router_cache.set(key=cache_key, value=animals)
     if not animals:
@@ -121,13 +130,18 @@ async def read_animals( query: str  | None = Query(default=None,
 async def read_animal(animal_id: int,
                         db: AsyncSession = Depends(get_db)) -> AnimalResponse:
     """Retrieves an animal by id. Returns the retrieved animal object"""
-    cache_key = animals_router_cache.get_cache_key(str(animal_id))
-    animal: AnimalResponse = await animals_router_cache.get(key=cache_key)
-    if not animal:
-        animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
-        animal = AnimalResponse.model_validate(animal)
-        if animal:
-            await animals_router_cache.set(key=cache_key, value=animal)
+    animal: AnimalResponse | None = None
+    try:
+        cache_key = animals_router_cache.get_cache_key(str(animal_id))
+        animal = await animals_router_cache.get(key=cache_key)
+        if not animal:
+            animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
+            animal = AnimalResponse.model_validate(animal)
+            if animal:
+                await animals_router_cache.set(key=cache_key, value=animal)
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if not animal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
     return animal
@@ -136,13 +150,18 @@ async def read_animal(animal_id: int,
 @router.get("/locations",  response_model=List[LocationResponse])
 async def read_locations(db: AsyncSession = Depends(get_db)) -> List[LocationResponse]:
     """Retrieves location definitions. Returns the retrieved locations"""
-    cache_key = locations_router_cache.get_all_records_cache_key_with_params()
-    locations: List[LocationResponse] = await locations_router_cache.get(key=cache_key)
-    if not locations:
-        locations = await animals_repository.read_locations(db=db)
-        locations = [LocationResponse.model_validate(location) for location in locations]
-        if locations:
-            await locations_router_cache.set(key=cache_key, value=locations)
+    locations: List[LocationResponse] = []
+    try:
+        cache_key = locations_router_cache.get_all_records_cache_key_with_params()
+        locations = await locations_router_cache.get(key=cache_key)
+        if not locations:
+            locations = await animals_repository.read_locations(db=db)
+            locations = [LocationResponse.model_validate(location) for location in locations]
+            if locations:
+                await locations_router_cache.set(key=cache_key, value=locations)
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if not locations:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_location_not_found)
     return locations
@@ -152,7 +171,7 @@ async def read_locations(db: AsyncSession = Depends(get_db)) -> List[LocationRes
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def create_locations(models: List[LocationCreate],
+async def create_locations(models: List[LocationBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user, scopes=["location:write"]),
                     ) -> List[LocationResponse]:
@@ -171,6 +190,9 @@ async def create_locations(models: List[LocationCreate],
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
     except IntegrityError as err:
         raise HTTPException(detail=jsonable_encoder(err), status_code=status.HTTP_409_CONFLICT)
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     await locations_router_cache.invalidate_all_keys()
     return locations
 
@@ -178,13 +200,18 @@ async def create_locations(models: List[LocationCreate],
 @router.get("/animal_types",  response_model=List[AnimalTypeResponse])
 async def read_animal_types(db: AsyncSession = Depends(get_db)) -> List[AnimalTypeResponse]:
     """Retrieves animal type definitions. Returns the retrieved animal types"""
-    cache_key = animal_types_router_cache.get_all_records_cache_key_with_params()
-    anymal_types: List[AnimalTypeResponse] = await animal_types_router_cache.get(key=cache_key)
-    if not anymal_types:
-        anymal_types = await animals_repository.read_animal_types(db=db)
-        anymal_types = [LocationResponse.model_validate(anymal_type) for anymal_type in anymal_types]
-        if anymal_types:
-            await animal_types_router_cache.set(key=cache_key, value=anymal_types)
+    anymal_types: List[AnimalTypeResponse] = []
+    try:
+        cache_key = animal_types_router_cache.get_all_records_cache_key_with_params()
+        anymal_types = await animal_types_router_cache.get(key=cache_key)
+        if not anymal_types:
+            anymal_types = await animals_repository.read_animal_types(db=db)
+            anymal_types = [LocationResponse.model_validate(anymal_type) for anymal_type in anymal_types]
+            if anymal_types:
+                await animal_types_router_cache.set(key=cache_key, value=anymal_types)
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if not anymal_types:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_type_not_found)
     return anymal_types
@@ -194,7 +221,7 @@ async def read_animal_types(db: AsyncSession = Depends(get_db)) -> List[AnimalTy
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def create_animal_types(models: List[AnimalTypeCreate],
+async def create_animal_types(models: List[AnimalTypeBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
                     ) -> List[AnimalTypeResponse]:
@@ -213,24 +240,12 @@ async def create_animal_types(models: List[AnimalTypeCreate],
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
     except IntegrityError as err:
         raise HTTPException(detail=jsonable_encoder(err), status_code=status.HTTP_409_CONFLICT)
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     await animal_types_router_cache.invalidate_all_keys()
     return animal_types
 
-
-async def __add_references(model: DeclarativeBase,
-                           references: List[BaseModel],
-                           func: Callable[..., Awaitable[DeclarativeBase]],
-                           user: User,
-                           db: AsyncSession,
-                           ) -> DeclarativeBase:
-    if references:
-        for ref_model in references:
-            model = await func(
-                model=ref_model,
-                animal=model,
-                user=user,
-                db=db)
-    return model
 
 @router.post(settings.animals_prefix, response_model=AnimalResponse, status_code=status.HTTP_201_CREATED,
             description=settings.rate_limiter_description,
@@ -252,40 +267,39 @@ async def create_animal(model: AnimalCreate,
                                                           animal=animal,
                                                           user=current_user,
                                                           db=db)
-        if model.locations:
-            for location_model in model.locations:
-                location = await animals_repository.read_location(location_id=location_model.location.id, db=db)
-                if location:
-                    animal = await animals_repository.add_animal_location(model=location_model,
-                                                                          location=location,
-                                                                          animal=animal,
-                                                                          user=current_user,
-                                                                          db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.vaccinations,
-                                        func=animals_repository.add_vaccination_to_animal,
-                                        user=current_user,
-                                        db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.diagnoses,
-                                        func=animals_repository.add_diagnosis_to_animal,
-                                        user=current_user,
-                                        db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.procedures,
-                                        func=animals_repository.add_procedure_to_animal,
-                                        user=current_user,
-                                        db=db)
-        animal = await __add_references(model=animal,
-                                        references=model.media,
-                                        func=animals_repository.add_media_to_animal,
-                                        user=current_user,
-                                        db=db)
+        animal = await update_handler.handle_update(section_name="locations",
+                                                        model=animal,
+                                                        update_model=model.locations,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="vaccinations",
+                                                        model=animal,
+                                                        update_model=model.vaccinations,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="diagnoses",
+                                                        model=animal,
+                                                        update_model=model.diagnoses,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="procedures",
+                                                        model=animal,
+                                                        update_model=model.procedures,
+                                                        user=current_user,
+                                                        db=db)
+        animal = await update_handler.handle_update(section_name="media",
+                                                        model=animal,
+                                                        update_model=model.media,
+                                                        user=current_user,
+                                                        db=db)
 
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
     except IntegrityError as err:
         raise HTTPException(detail=jsonable_encoder(err), status_code=status.HTTP_409_CONFLICT)
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     await animals_router_cache.invalidate_all_keys()
     return AnimalResponse.model_validate(animal)
 
@@ -299,10 +313,132 @@ async def delete_animal(animal_id: int,
                         _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
                     ) -> None:
     """Deletes the animal by ID"""
-    animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
-    cache_key = animals_router_cache.get_cache_key(str(animal_id))
-    if not animal:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
-    await animals_repository.delete_animal(animal=animal, db=db)
-    await animals_router_cache.invalidate_key(key=cache_key)
-    await animals_router_cache.invalidate_all_keys()
+    try:
+        animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
+        cache_key = animals_router_cache.get_cache_key(str(animal_id))
+        if not animal:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
+        await animals_repository.delete_animal(animal=animal, db=db)
+        await animals_router_cache.invalidate_key(key=cache_key)
+        await animals_router_cache.invalidate_all_keys()
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@router.put(settings.animals_prefix + "/{animal_id}/{section_name}",
+            description=settings.rate_limiter_description,
+            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
+                                              seconds=settings.rate_limiter_seconds))])
+async def update_animal_section(animal_id: int,
+                                section_name: str,
+                                body: dict = Body(),
+                                db: AsyncSession = Depends(get_db),
+                                current_user: User = Security(authorization_service.authorize_user_for_section,
+                                                              scopes=["animal:read", "animal:write"]),
+                                ) -> AnimalResponse:
+    """Updates animal object baased on JSON body. Returns updated animal"""
+    try:
+        animal:Animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
+        if not animal:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
+        editing_lock = await animals_repository.read_editing_lock(animal_id=animal_id,
+                                                                section_name=section_name,
+                                                                db=db)
+        exprire_delta:timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
+        if (not editing_lock
+            or editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone()):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail=RETURN_MSG.crm_lock_not_found % (section_name, current_user.email))
+        if editing_lock.user.id != current_user.id:
+            details: str = EditingLockResponse.model_validate(editing_lock).model_dump_json()
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
+        await animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
+        section_model: BaseModel = None
+        section_model_type: Optional[Type[BaseModel]] = NamedSection.get_section_by_name(section_name=section_name)
+        if section_model_type:
+            section_model = section_model_type.model_validate(body)
+            if section_model:
+                animal = await update_handler.handle_update(section_name=section_name,
+                                                            model=animal,
+                                                            update_model=section_model,
+                                                            user=current_user,
+                                                            db=db)
+                cache_key = animals_router_cache.get_cache_key(str(animal_id))
+                await animals_router_cache.invalidate_key(key=cache_key)
+                await animals_router_cache.invalidate_all_keys()
+        animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
+        return AnimalResponse.model_validate(animal)
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@router.post(settings.animals_prefix + "/{animal_id}/{section_name}/lock",
+             response_model=EditingLockResponse, status_code=status.HTTP_201_CREATED,
+            description=settings.rate_limiter_description,
+            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
+                                              seconds=settings.rate_limiter_seconds))])
+async def acquire_lock(animal_id: int,
+                              section_name: str,
+                              db: AsyncSession = Depends(get_db),
+                              current_user: User = Security(authorization_service.authorize_user_for_section,
+                                                              scopes=["animal:read", "animal:write"]),
+                             ) -> EditingLockResponse:
+    """Acquires lock on section for context user. Returns the acquired lock"""
+    try:
+        editing_lock = await animals_repository.read_editing_lock(animal_id=animal_id,
+                                                              section_name=section_name,
+                                                              db=db)
+        exprire_delta:timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
+        if editing_lock:
+            if (editing_lock.user.id != current_user.id
+                    and editing_lock.created_at + exprire_delta >= datetime.now(timezone.utc).astimezone()):
+                details: str = EditingLockResponse.model_validate(editing_lock).model_dump_json()
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
+            if (editing_lock.user.id == current_user.id
+                    and editing_lock.created_at + exprire_delta >= datetime.now(timezone.utc).astimezone()):
+                return editing_lock
+            await animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
+
+        editing_lock = await animals_repository.create_editing_lock(animal_id=animal_id,
+                                                                    section_name=section_name,
+                                                                    user=current_user,
+                                                                    db=db)
+    except Exception:
+        logger.exception("An error occured:\n")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=RETURN_MSG.crm_acquire_lock_failed % (section_name, current_user.email))
+    return editing_lock
+
+@router.delete(settings.animals_prefix + "/{animal_id}/{section_name}/lock", status_code=status.HTTP_204_NO_CONTENT,
+            description=settings.rate_limiter_description,
+            dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
+                                              seconds=settings.rate_limiter_seconds))])
+async def release_lock(animal_id: int,
+                        section_name: str,
+                        db: AsyncSession = Depends(get_db),
+                        current_user: User = Security(authorization_service.authorize_user_for_section,
+                                                        scopes=["animal:read", "animal:write"]),
+                    ) -> None:
+    """Deletes the animal by ID"""
+    try:
+        editing_lock = await animals_repository.read_editing_lock(animal_id=animal_id,
+                                                                section_name=section_name,
+                                                                db=db)
+        if not editing_lock:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail=RETURN_MSG.crm_lock_not_found % (section_name, current_user.email))
+        if editing_lock.user.id != current_user.id:
+            details: str = EditingLockResponse.model_validate(editing_lock).model_dump_json()
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
+        await animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception("An error occured:\n")
+        raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

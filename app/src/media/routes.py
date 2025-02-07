@@ -1,5 +1,4 @@
 import logging
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, List
 
@@ -8,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import Response
 from fastapi_limiter.depends import RateLimiter
-from pydantic import ValidationError
+from pydantic import UUID4, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.db import get_db
 from src.configuration.settings import settings
@@ -24,41 +23,6 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.media_prefix, tags=["media"])
 media_router_cache: Cache = Cache(owner=router, all_prefix="media_assets", ttl=settings.default_cache_ttl)
 
-@router.get("/{media_id}")
-async def read_media(media_id: uuid.UUID,
-                        db: AsyncSession = Depends(get_db),
-                    ) -> Response:
-    """Retrieves media asset's binary stream by its unique identifier. Returns Response with media content"""
-    cache_key = media_router_cache.get_cache_key(key=media_id)
-    media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
-    if not media_asset:
-        media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
-        media_asset = MediaAssetResponse.model_validate(media_asset)
-        if media_asset:
-            await media_router_cache.set(key=cache_key, value=media_asset)
-    if media_asset is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
-    media_bytes: bytes = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
-    if not media_bytes:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_blob_not_found)
-    return Response(content=media_bytes, media_type=media_asset.content_type)
-
-
-@router.get(settings.media_assets_prefix + "/{media_id}",  response_model=MediaAssetResponse)
-async def read_media_asset(media_id: uuid.UUID,
-                        db: AsyncSession = Depends(get_db),
-                    ) -> MediaAssetResponse:
-    """Retrieves a single media asset by its unique identifier. Returns media asset information"""
-    cache_key = media_router_cache.get_cache_key(key=media_id)
-    media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
-    if not media_asset:
-        media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
-        media_asset = MediaAssetResponse.model_validate(media_asset)
-        if media_asset:
-            await media_router_cache.set(key=cache_key, value=media_asset)
-    if media_asset is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
-    return media_asset
 
 @router.get(settings.media_assets_prefix,  response_model=List[MediaAssetResponse])
 async def read_media_assets(from_date: datetime =  Query(default=None, description="Filter media assets by FROM date"),
@@ -97,6 +61,43 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
     return media_assets
 
 
+@router.get(settings.media_assets_prefix + "/{media_id}",  response_model=MediaAssetResponse)
+async def read_media_asset(media_id: UUID4,
+                        db: AsyncSession = Depends(get_db),
+                    ) -> MediaAssetResponse:
+    """Retrieves a single media asset by its unique identifier. Returns media asset information"""
+    cache_key = media_router_cache.get_cache_key(key=media_id)
+    media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
+    if not media_asset:
+        media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
+        media_asset = MediaAssetResponse.model_validate(media_asset)
+        if media_asset:
+            await media_router_cache.set(key=cache_key, value=media_asset)
+    if media_asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
+    return media_asset
+
+
+@router.get("/{media_id}")
+async def read_media(media_id: UUID4,
+                        db: AsyncSession = Depends(get_db),
+                    ) -> Response:
+    """Retrieves media asset's binary stream by its unique identifier. Returns Response with media content"""
+    cache_key = media_router_cache.get_cache_key(key=media_id)
+    media_asset: MediaAsset = await media_router_cache.get(key=cache_key)
+    if not media_asset:
+        media_asset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
+        media_asset = MediaAssetResponse.model_validate(media_asset)
+        if media_asset:
+            await media_router_cache.set(key=cache_key, value=media_asset)
+    if media_asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_not_found)
+    media_bytes: bytes = await media_repository.read_blob(blob_id=media_asset.blob_id, db=db)
+    if not media_bytes:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.media_blob_not_found)
+    return Response(content=media_bytes, media_type=media_asset.content_type)
+
+
 @router.post(settings.media_assets_prefix, response_model=MediaAssetResponse, status_code=status.HTTP_201_CREATED,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
@@ -118,7 +119,7 @@ async def create_media_asset(file: UploadFile = File(),
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
                                               seconds=settings.rate_limiter_seconds))])
-async def remove_media_asset(media_id: uuid.UUID,
+async def remove_media_asset(media_id: UUID4,
                         db: AsyncSession = Depends(get_db),
                     ) -> None:
     """Deletes a media asset by its unique identifier"""

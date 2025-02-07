@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     invitation_token_expire_days: int = 10 # 10 days
     refresh_token_expire_days: int = 7 # 7 days
     reset_password_expire_mins: int = 15 # 15 minutes
+    crm_editing_lock_expire_minutes: int = 15 # 15 minutes
 
     model_config = ConfigDict(extra="ignore",
                               env_file=env_file if env_file.exists() else None,
