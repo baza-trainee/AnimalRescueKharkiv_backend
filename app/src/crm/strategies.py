@@ -4,7 +4,7 @@ import re
 import uuid
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Any, Awaitable, Callable, Dict, List, Tuple, TypeVar
+from typing import Any, Awaitable, Callable, Dict, List, Tuple, Type, TypeVar
 from uuid import UUID
 
 import uvicorn
@@ -85,13 +85,21 @@ class UpdateRefsStrategy(UpdateStrategy):
                  ref_name: str,
                  add_func: Callable[...,Awaitable[DeclarativeBase]] | None = None,
                  read_def_func: Callable[[int | UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = None,
+                 read_def_id_type: type = IntReferenceBase,
                  update_func: Callable[..., Awaitable[DeclarativeBase]] | None = None,
+                 *,
+                 add_func_model_supported: bool = True,
                 ) -> None:
         """Initializes strategy"""
         self.__ref_name: str = ref_name
         self.__add_func: Callable[...,Awaitable[DeclarativeBase]] | None = add_func
         self.__read_def_func: Callable[[int | UUID, AsyncSession], Awaitable[DeclarativeBase]] | None = read_def_func
+        self.__read_def_id_type: type = read_def_id_type
         self.__update_func: Callable[..., Awaitable[DeclarativeBase]] | None = update_func
+        self.__def_id_accessor: Callable[[Any], Any] = ((lambda x: x)
+                                                        if self.__read_def_id_type == UUID
+                                                        else (lambda x: x.id))
+        self.__add_func_model_supported = add_func_model_supported
 
     async def update(self,
                      model: Animal,
@@ -133,11 +141,9 @@ class UpdateRefsStrategy(UpdateStrategy):
                 field = getattr(update_model, field_name, None)
                 if isinstance(field, UUID):
                     ref_obj = self.__get_ref_by_id(ref_id=field, model=model)
-                    if (self.__read_def_func
-                            and "media_asset_id" in inspect.getfullargspec(self.__read_def_func).args):
-                        definition = await self.__read_def_func(field, db)
-                if isinstance(field, IntReferenceBase) and self.__read_def_func:
-                    definition = await self.__read_def_func(field.id, db)
+                if isinstance(field, self.__read_def_id_type) and self.__read_def_func:
+                    def_id = self.__def_id_accessor(field)
+                    definition = await self.__read_def_func(def_id , db)
         if ref_obj:
             model = await self.__update_reference(model=model,
                                                   ref_obj=ref_obj,
@@ -164,7 +170,7 @@ class UpdateRefsStrategy(UpdateStrategy):
             return model
 
         if definition:
-            if "model" in inspect.getfullargspec(self.__add_func).args:
+            if self.__add_func_model_supported:
                 model = await self.__add_func(
                             definition=definition,
                             model=update_model,
@@ -229,7 +235,9 @@ class UpdateHanlder(metaclass=SingletonMeta):
             "microchipping": UpdateAttrsStrategy(),
             "media": UpdateRefsStrategy(ref_name="media",
                                         read_def_func=media_repository.read_media_asset,
-                                        add_func=animals_repository.add_media_to_animal),
+                                        read_def_id_type=UUID,
+                                        add_func=animals_repository.add_media_to_animal,
+                                        add_func_model_supported=False),
             "locations": UpdateRefsStrategy(ref_name="locations",
                                             add_func=animals_repository.add_animal_location,
                                             read_def_func=animals_repository.read_location,
