@@ -30,8 +30,10 @@ class AutoInitializer:
 
             if not hasattr(cls, "_initializers"):
                 cls._initializers = {}
-
-            cls._initializers[index] = wrapper
+            init_index = index
+            if index in cls._initializers:
+                init_index = max(cls._initializers.keys()) + 1
+            cls._initializers[init_index] = wrapper
             return wrapper
 
         return decorator
