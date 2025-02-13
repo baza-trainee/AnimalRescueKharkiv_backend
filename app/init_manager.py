@@ -1,74 +1,57 @@
+import functools
 import json
+import logging
 from pathlib import Path
+from typing import Callable, ClassVar
 
+import uvicorn
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.settings import settings
+from src.crm.repository import animals_repository
+from src.crm.schemas import AnimalTypeBase, LocationBase
 from src.permissions.repository import permissions_repository
 from src.permissions.schemas import PermissionBase
 from src.roles.repository import roles_repository
-from src.roles.schemas import RoleBase
+from src.roles.schemas import RoleBase, RoleUpdate
 from src.users.repository import users_repository
 from src.users.schemas import UserCreate
 
+logger = logging.getLogger(uvicorn.logging.__name__)
 
-class DataInitializer:
-    """A utility class to initialize data (permissions, roles, and users)
-    from JSON files into the database. The class reads data from JSON
-    files located in a specified directory and inserts the data into
-    the database if the records don't already exist.
+class AutoInitializer:
+    _initializers: ClassVar[dict] = {}
+    @classmethod
+    def data_init(cls, index: int) -> Callable:
+        """Decorator to save initializer methods in a private dictionary."""
+        def decorator(method: Callable) -> Callable:
+            @functools.wraps(method)
+            def wrapper(self: object, *args, **kwargs) -> None:
+                return method(self, *args, **kwargs)
 
-    Attributes:
-    ----------
-    db : AsyncSession
-        A database session for executing asynchronous queries.
-    base_path : Path
-        The path where JSON files containing initial data are stored.
-        Defaults to the 'init_data' directory located in the same folder
-        as the script.
-    """
+            if not hasattr(cls, "_initializers"):
+                cls._initializers = {}
 
+            cls._initializers[index] = wrapper
+            return wrapper
+
+        return decorator
+
+class DataInitializer(AutoInitializer):
     def __init__(self, db_session: AsyncSession, base_path: Path = Path(__file__).parent / "init_data") -> None:
-        """Initializes the DataInitializer instance with a database session and
-        an optional base path where the JSON files are located.
-
-        Parameters
-        ----------
-        db_session : AsyncSession
-            The asynchronous session to be used for database transactions.
-        base_path : Path, optional
-            The directory where the JSON files containing the initial data
-            are stored. Defaults to the 'init_data' directory.
-        """
+        """Creates instance of DataInitializer"""
         self.db = db_session
         self.base_path = base_path
+        self.__class__._initializers = dict(sorted(self.__class__._initializers.items())) #noqa: SLF001
 
     def __load_json(self, filename: str) -> dict | None:
-        """Loads a JSON file and returns its contents as a dictionary.
-
-        Parameters
-        ----------
-        filename : str
-            The name of the JSON file to be loaded.
-
-        Returns:
-        -------
-        dict | None
-            A dictionary containing the data from the JSON file if the file
-            exists, otherwise None.
-        """
         path = self.base_path / filename
         if path.exists():
-            with path.open() as file:
+            with path.open(encoding="utf-8") as file:
                 return json.load(file)
         return None
 
+    @AutoInitializer.data_init(index=1)
     async def __init_permissions(self) -> None:
-        """Initializes permissions by reading the 'permissions.json' file and
-        adding permissions to the database if they don't already exist.
-
-        The method iterates through the list of permissions in the file, checks
-        if each permission exists in the database, and creates it if it doesn't.
-        """
         permissions_data = self.__load_json("permissions.json")
         if permissions_data:
             for perm in permissions_data:
@@ -77,28 +60,24 @@ class DataInitializer:
                 if not existing:
                     await permissions_repository.create_permission(perm_obj, self.db)
 
+    @AutoInitializer.data_init(index=2)
     async def __init_roles(self) -> None:
-        """Initializes roles by reading the 'roles.json' file and adding roles to
-        the database if they don't already exist.
-
-        The method iterates through the list of roles in the file, checks if
-        each role exists in the database, and creates it if it doesn't.
-        """
         roles_data = self.__load_json("roles.json")
         if roles_data:
-            for role in roles_data:
-                role_obj = RoleBase(**role)
+            for role_model in roles_data:
+                role_obj = RoleBase(**role_model)
                 existing = await roles_repository.read_role(role_obj, self.db)
                 if not existing:
-                    await roles_repository.create_role(role_obj, self.db)
+                    existing = await roles_repository.create_role(role_obj, self.db)
+                role_update = RoleUpdate(**role_model)
+                if role_update and role_update.assign:
+                    for permission_model in role_update.assign:
+                        permission = await permissions_repository.read_permission(permission_model, self.db)
+                        if permission:
+                            existing = await roles_repository.assign_permission(existing, permission, self.db)
 
+    @AutoInitializer.data_init(index=3)
     async def __init_users(self) -> None:
-        """Initializes users by reading the 'users.json' file and adding users to
-        the database if they don't already exist.
-
-        The method iterates through the list of users in the file, checks if
-        each user exists in the database, and creates them if they don't.
-        """
         users_data = self.__load_json("users.json")
         if users_data:
             for user in users_data:
@@ -107,14 +86,8 @@ class DataInitializer:
                 if not existing:
                     await users_repository.create_user(user_obj, self.db)
 
+    @AutoInitializer.data_init(index=4)
     async def __init_super_user(self) -> None:
-        """Initializes or updates the super user in the database.
-
-        This method checks whether a super user with the predefined
-        credentials exists in the database. If not, it creates a new
-        super user. If the user already exists, it updates the user's
-        information with the latest credentials from the settings.
-        """
         role_obj = RoleBase(
             domain=settings.super_user_domain,
             name=settings.super_user_role,
@@ -145,14 +118,36 @@ class DataInitializer:
             await self.db.commit()
             await self.db.refresh(existing)
 
-    async def run(self) -> None:
-        """Executes the data initialization process for permissions, roles, and users.
+    @AutoInitializer.data_init(index=5)
+    async def __init_locations(self) -> None:
+        locations_data = self.__load_json("locations.json")
+        locations = await animals_repository.read_locations(self.db)
+        location_names = [loc.name.lower() for loc in locations]
+        if locations_data:
+            for location in locations_data:
+                location_obj = LocationBase(**location)
+                if location_obj.name.lower() not in location_names:
+                    await animals_repository.create_location(location_obj, self.db)
 
-        This method sequentially calls `init_permissions()`, `init_roles()`, and
-        `init_users()` to initialize the database with the data from the respective
-        JSON files.
-        """
-        await self.__init_permissions()
-        await self.__init_roles()
-        await self.__init_users()
-        await self.__init_super_user()
+    @AutoInitializer.data_init(index=6)
+    async def __init_animal_types(self) -> None:
+        animal_types_data = self.__load_json("animal_types.json")
+        animal_types = await animals_repository.read_animal_types(self.db)
+        animal_type_names = [at.name.lower() for at in animal_types]
+        if animal_types_data:
+            for animal_type in animal_types_data:
+                animal_type_obj = AnimalTypeBase(**animal_type)
+                if animal_type_obj.name.lower() not in animal_type_names:
+                    await animals_repository.create_animal_type(animal_type_obj, self.db)
+
+    async def __run_initializers(self) -> None:
+        for initializer in self._initializers.values():
+            name = initializer.__name__.removeprefix("__")
+            logger.info(f"{name} executed")
+            await initializer(self)
+
+    async def run(self) -> None:
+        """Executes the data initialization process"""
+        logger.info(f"{self.__class__.__name__} started")
+        await self.__run_initializers()
+        logger.info(f"{self.__class__.__name__} completed")
