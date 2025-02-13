@@ -2,10 +2,9 @@ from datetime import datetime
 from typing import Annotated
 
 from pydantic import UUID4, BaseModel, ConfigDict, PlainSerializer, Strict, computed_field
-from src.base_schemas import ResponseReferenceBase, UUIDReferenceBase
+from src.base_schemas import ResponseReferenceBase, UUIDReferenceBase, UUIDString
 from src.configuration.settings import settings
 
-UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
 
 class MediaAssetInfo(BaseModel):
     blob_id: UUIDString
