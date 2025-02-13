@@ -43,7 +43,6 @@ class DataInitializer(AutoInitializer):
         """Creates instance of DataInitializer"""
         self.db = db_session
         self.base_path = base_path
-        self.__class__._initializers = dict(sorted(self.__class__._initializers.items())) #noqa: SLF001
 
     def __load_json(self, filename: str) -> dict | None:
         path = self.base_path / filename
@@ -143,10 +142,10 @@ class DataInitializer(AutoInitializer):
                     await animals_repository.create_animal_type(animal_type_obj, self.db)
 
     async def __run_initializers(self) -> None:
-        for initializer in self._initializers.values():
-            name = initializer.__name__.removeprefix("__")
+        for initializer in sorted(self._initializers.items()):
+            name = initializer[1].__name__.removeprefix("__")
             logger.info(f"{name} executed")
-            await initializer(self)
+            await initializer[1](self)
 
     async def run(self) -> None:
         """Executes the data initialization process"""
