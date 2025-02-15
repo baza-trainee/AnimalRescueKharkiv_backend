@@ -4,14 +4,11 @@ from typing import TYPE_CHECKING
 import uvicorn
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from src.media.repository import media_repository
-from src.roles.repository import roles_repository
+from src.media.models import MediaAsset
+from src.roles.models import Role
 from src.singleton import SingletonMeta
 from src.users.models import User
 from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserPasswordUpdate, UserUpdate
-
-if TYPE_CHECKING:
-    from src.roles.models import Role
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
@@ -60,17 +57,27 @@ class UsersRepository(metaclass=SingletonMeta):
             user.last_name = new_data.last_name
         if new_data.phone:
             user.phone = new_data.phone
-        if new_data.photo:
-            photo = await media_repository.read_media_asset(media_asset_id=new_data.photo.id, db=db)
-            if photo:
-                user.photo.id = photo.id
-        if new_data.role:
-            role = await roles_repository.read_role(model=new_data.role, db=db)
-            if role:
-                user.role_id = role.id
         db.add(user)
         await db.commit()
         await db.refresh(user)
+        return user
+
+    async def assign_role_to_user(self, user: User, role: Role, db: AsyncSession) -> User:
+        """Assigns role to user. Returns the updated user"""
+        if role:
+            user.role = role
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        return user
+
+    async def assign_photo_to_user(self, user: User, photo: MediaAsset, db: AsyncSession) -> User:
+        """Assigns photo to user. Returns the updated user"""
+        if photo:
+            user.photo = photo
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
         return user
 
     async def update_password(self, user: User, update: UserPasswordUpdate, db: AsyncSession) -> User:

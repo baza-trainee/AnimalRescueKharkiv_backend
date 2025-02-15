@@ -17,8 +17,8 @@ class UserExt(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
-    role: Optional[RoleResponse] = None
-    photo: Optional[MediaAssetResponse] = None
+    role: Optional[RoleBase] = None
+    photo: Optional[UUIDReferenceBase] = None
 
 
 def validate_password(value: str) -> str:
@@ -36,15 +36,13 @@ class UserCreate(UserBase, UserExt):
 
 
 class UserResponse(UserBase, UserExt, ResponseReferenceBase):
+    role: Optional[RoleResponse] = None
+    photo: Optional[MediaAssetResponse] = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(UserExt):
-    role: Optional[RoleBase] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    photo: Optional[UUIDReferenceBase] = None
+    pass
 
 
 class UserPasswordUpdate(BaseModel):
