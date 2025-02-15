@@ -74,7 +74,8 @@ class DataInitializer(AutoInitializer):
                 if role_update and role_update.assign:
                     for permission_model in role_update.assign:
                         permission = await permissions_repository.read_permission(permission_model, self.db)
-                        if permission:
+                        if permission and (not existing.permissions or
+                                           all(p.id != permission.id for p in existing.permissions)):
                             existing = await roles_repository.assign_permission(existing, permission, self.db)
 
     @AutoInitializer.data_init(index=3)
@@ -86,6 +87,10 @@ class DataInitializer(AutoInitializer):
                 existing = await users_repository.read_user(user_obj, self.db)
                 if not existing:
                     await users_repository.create_user(user_obj, self.db)
+                if user_obj.role and user_obj.role.name and user_obj.role.domain:
+                    role = await roles_repository.read_role(user_obj.role, self.db)
+                    if role and (not existing.role or existing.role.id != role.id):
+                        existing = await users_repository.assign_role_to_user(existing, role, self.db)
 
     @AutoInitializer.data_init(index=4)
     async def __init_super_user(self) -> None:
