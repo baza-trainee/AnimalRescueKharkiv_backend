@@ -3,7 +3,7 @@ import pkgutil
 from importlib import import_module
 from importlib.machinery import FileFinder
 from types import ModuleType
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 import src
 from fastapi import APIRouter
@@ -25,14 +25,24 @@ def get_app_routers() -> list:
         module=src,
         attribute_type=APIRouter,
         match_module_name="routes",
+        unique_key=lambda x: x.prefix,
     ).values())
+
+def __get_unique_attr_key(global_attr: object,
+                           attribute_type: type|None = None,
+                           unique_key: Callable[[Any], str]|None = None) -> str:
+    key = str(id(global_attr))
+    if unique_key and attribute_type is not None  and isinstance(global_attr, attribute_type):
+        key = unique_key(global_attr)
+    return key
 
 def find_attributes_recursively(module: ModuleType,
                     attribute_name: str|None = None,
                     attribute_type: type|None = None,
-                    match_module_name: str|None = None) -> Dict[int, Any]:
+                    match_module_name: str|None = None,
+                    unique_key: Callable[[Any], str]|None = None) -> Dict[str, Any]:
     """Recursively loops through modules to find global attributes by name and/or type"""
-    attributes:Dict[int,Any] = {}
+    attributes:Dict[str,Any] = {}
     for loader, module_name, is_pkg in pkgutil.walk_packages(module.__path__):
         if isinstance(loader, FileFinder):
             module_spec = loader.find_spec(module_name)
@@ -43,17 +53,21 @@ def find_attributes_recursively(module: ModuleType,
                         find_attributes_recursively(submodule,
                                                 attribute_name,
                                                 attribute_type,
-                                                match_module_name))
+                                                match_module_name,
+                                                unique_key=unique_key))
                 elif not match_module_name or module_name == match_module_name:
                     submodule = module_spec.loader.load_module(module_name)
                     for global_attr_name in dir(submodule):
                         if attribute_name and attribute_name != global_attr_name:
                             continue
                         global_attr = getattr(submodule,global_attr_name)
-                        if (global_attr and id(global_attr) not in attributes):
+                        key = __get_unique_attr_key(global_attr=global_attr,
+                                                    attribute_type=attribute_type,
+                                                    unique_key=unique_key)
+                        if (global_attr and key not in attributes):
                             if attribute_type and not isinstance(global_attr, attribute_type):
                                 continue
-                            attributes[id(global_attr)] = global_attr
+                            attributes[key] = global_attr
     return attributes
 
 
