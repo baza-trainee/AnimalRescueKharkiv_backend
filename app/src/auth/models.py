@@ -17,7 +17,7 @@ class TokenType(enum.Enum):
 class SecurityToken(Base):
     __tablename__ = "security_tokens"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    token: Mapped[str] = mapped_column(String(length=500), index=True)
+    token: Mapped[str] = mapped_column(String(length=5000), index=True)
     token_type = Column("token_type", Enum(TokenType), default=TokenType.access)
     created_at = Column("created_at", DateTime(timezone=True), default=func.now(), index=True)
     expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
