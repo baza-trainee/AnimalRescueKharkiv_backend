@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 import uvicorn
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -23,6 +23,9 @@ from src.roles.schemas import RoleBase
 from src.services.email import email_service
 from src.users.repository import users_repository
 from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserResponse, UserUpdate
+
+if TYPE_CHECKING:
+    from src.roles.models import Role
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.auth_prefix, tags=["auth"])
@@ -102,9 +105,10 @@ async def register_user(
                                  last_name=user_register.last_name,
                                  phone=user_register.phone)
         user = await users_repository.create_user(model=user_create, db=db)
-        role = token_payload["role"]
-        user_update = UserUpdate(role=RoleBase(domain=user.domain, name=role))
-        user = await users_repository.update_user(user=user, new_data=user_update, db=db)
+        role_name = token_payload["role"]
+        if role_name:
+            role: Role = await roles_repository.read_role(model=RoleBase(domain=user.domain, name=role_name), db=db)
+            user = await users_repository.assign_role_to_user(user=user, role=role, db=db)
         template_body = {
             "url": settings.url_login,
             "email": user.email,
