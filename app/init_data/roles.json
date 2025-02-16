@@ -4,16 +4,242 @@
     "domain": "global"
   },
   {
-    "name": "driver",
-    "domain": "global",
+    "name": "admin",
+    "domain": "crm",
+    "title": "Адміністратор",
     "assign": [
       {
-        "entity": "user",
+        "entity": "crm",
+        "operation": "read"
+      },
+      {
+        "entity": "animal",
         "operation": "create"
       },
       {
-        "entity": "user",
-        "operation": "delete"
+        "entity": "locations",
+        "operation": "write",
+        "title": "Поточна локація"
+      },
+      {
+        "entity": "name",
+        "operation": "write",
+        "title": "Ім'я"
+      },
+      {
+        "entity": "media",
+        "operation": "write",
+        "title": "Фото"
+      },
+      {
+        "entity": "origin",
+        "operation": "write",
+        "title": "Дата/адреса прибуття"
+      },
+      {
+        "entity": "general",
+        "operation": "write",
+        "title": "Тип/стать/вага/вік тварини"
+      },
+      {
+        "entity": "owner",
+        "operation": "write",
+        "title": "Інформація про власника"
+      },
+      {
+        "entity": "comment",
+        "operation": "write",
+        "title": "Загальний коментар"
+      },
+      {
+        "entity": "adoption",
+        "operation": "write",
+        "title": "Прилаштування"
+      },
+      {
+        "entity": "death",
+        "operation": "write",
+        "title": "Смерть"
+      },
+      {
+        "entity": "sterilization",
+        "operation": "write",
+        "title": "Стерилізація/кастрація"
+      },
+      {
+        "entity": "microchipping",
+        "operation": "write",
+        "title": "Чіпування"
+      },
+      {
+        "entity": "vaccinations",
+        "operation": "write",
+        "title": "Вакцинація"
+      },
+      {
+        "entity": "diagnoses",
+        "operation": "write",
+        "title": "Хвороби і діагнози"
+      },
+      {
+        "entity": "procedures",
+        "operation": "write",
+        "title": "Процедури"
+      }
+    ]
+  },
+  {
+    "name": "driver",
+    "domain": "crm",
+    "title": "Водій",
+    "assign": [
+      {
+        "entity": "crm",
+        "operation": "read"
+      },
+      {
+        "entity": "animal",
+        "operation": "create"
+      },
+      {
+        "entity": "name",
+        "operation": "write",
+        "title": "Ім'я"
+      },
+      {
+        "entity": "media",
+        "operation": "write",
+        "title": "Фото"
+      },
+      {
+        "entity": "origin",
+        "operation": "write",
+        "title": "Дата/адреса прибуття"
+      }
+    ]
+  },
+  {
+    "name": "volunteer",
+    "domain": "crm",
+    "title": "Волонтер",
+    "assign": [
+      {
+        "entity": "crm",
+        "operation": "read"
+      },
+      {
+        "entity": "animal",
+        "operation": "create"
+      },
+      {
+        "entity": "locations",
+        "operation": "write",
+        "title": "Поточна локація"
+      },
+      {
+        "entity": "name",
+        "operation": "write",
+        "title": "Ім'я"
+      },
+      {
+        "entity": "origin",
+        "operation": "write",
+        "title": "Дата/адреса прибуття"
+      },
+      {
+        "entity": "general",
+        "operation": "write",
+        "title": "Тип/стать/вага/вік тварини"
+      },
+      {
+        "entity": "owner",
+        "operation": "write",
+        "title": "Інформація про власника"
+      },
+      {
+        "entity": "comment",
+        "operation": "write",
+        "title": "Загальний коментар"
+      },
+      {
+        "entity": "adoption",
+        "operation": "write",
+        "title": "Прилаштування"
+      },
+      {
+        "entity": "death",
+        "operation": "write",
+        "title": "Смерть"
+      }
+    ]
+  },
+  {
+    "name": "doctor",
+    "domain": "crm",
+    "title": "Лікар",
+    "assign": [
+      {
+        "entity": "crm",
+        "operation": "read"
+      },
+      {
+        "entity": "animal",
+        "operation": "create"
+      },
+      {
+        "entity": "general",
+        "operation": "write",
+        "title": "Тип/стать/вага/вік тварини"
+      },
+      {
+        "entity": "death",
+        "operation": "write",
+        "title": "Смерть"
+      },
+      {
+        "entity": "sterilization",
+        "operation": "write",
+        "title": "Стерилізація/кастрація"
+      },
+      {
+        "entity": "microchipping",
+        "operation": "write",
+        "title": "Чіпування"
+      },
+      {
+        "entity": "vaccinations",
+        "operation": "write",
+        "title": "Вакцинація"
+      },
+      {
+        "entity": "diagnoses",
+        "operation": "write",
+        "title": "Хвороби і діагнози"
+      },
+      {
+        "entity": "procedures",
+        "operation": "write",
+        "title": "Процедури"
+      }
+    ]
+  },
+  {
+    "name": "photographer",
+    "domain": "crm",
+    "title": "Фотограф",
+    "assign": [
+      {
+        "entity": "crm",
+        "operation": "read"
+      },
+      {
+        "entity": "animal",
+        "operation": "create"
+      },
+      {
+        "entity": "media",
+        "operation": "write",
+        "title": "Фото"
       }
     ]
   }
