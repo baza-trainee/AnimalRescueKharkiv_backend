@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import Dict
 
 import uvicorn
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_limiter.depends import RateLimiter
 from pydantic import EmailStr
@@ -131,6 +131,7 @@ async def register_user(
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
                   times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
 async def login(
+    response: Response,
     body: OAuth2PasswordWithDomainRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> TokenBase:
@@ -141,11 +142,21 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.user_not_found % body.username)
     if body.password != user.password:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.pwd_invalid)
+
     refresh_token, refresh_id = await auth_service.create_refresh_token(user=user, db=db)
     access_token = await auth_service.create_access_token(user=user, refresh_id=refresh_id, db=db)
 
-    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+    logger.info(f"refersh_token={refresh_token}")
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        path="/auth",
+    )
 
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout", status_code=status.HTTP_200_OK,
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
@@ -167,17 +178,20 @@ async def logout(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RETURN_MSG.user_logout_failed)
 
 
-@router.post("/refresh", response_model=TokenBase, status_code=status.HTTP_200_OK,
-              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
-                  times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
+@router.post("/refresh", response_model=TokenBase, status_code=status.HTTP_200_OK)
 async def refresh_access_token(
-    refresh_token: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> TokenBase:
-    """Refreshes an access token or deletes an invalid token"""
+    """Refreshes an access token using the HTTP-only refresh token cookie"""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.token_refresh_missing)
+
     user, refresh_id = await auth_service.validate_user_from_refresh_token(refresh_token=refresh_token, db=db)
     access_token = await auth_service.create_access_token(user=user, refresh_id=refresh_id, db=db)
-    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/password/forgot/{domain}/{email}", status_code=status.HTTP_202_ACCEPTED,
