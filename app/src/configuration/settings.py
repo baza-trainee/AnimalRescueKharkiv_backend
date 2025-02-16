@@ -37,9 +37,9 @@ class Settings(BaseSettings):
     mail_from_name: str
     mail_port: int
     mail_server: str
-    url_register: str = "http://localhost:8000/auth/register"
-    url_reset_pwd: str = "http://localhost:8000/auth/password/reset"
-    url_login: str = "http://localhost:8000/auth/login"
+    url_register: str = "http://localhost:3000/register"
+    url_reset_pwd: str = "http://localhost:3000/resetPassword"
+    url_login: str = "http://localhost:3000/login"
     redis_host: str
     redis_port: int
     cors_origins: str
