@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class TokenBase(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    refresh_token: str
 
 
 class EmailBase(BaseModel):

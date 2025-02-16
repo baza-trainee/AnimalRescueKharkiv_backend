@@ -1,10 +1,80 @@
 [
   {
-    "entity": "user",
+    "entity": "crm",
+    "operation": "read"
+  },
+  {
+    "entity": "animal",
     "operation": "create"
   },
   {
-    "entity": "user",
-    "operation": "delete"
+    "entity": "locations",
+    "operation": "write",
+    "title": "Поточна локація"
+  },
+  {
+    "entity": "name",
+    "operation": "write",
+    "title": "Ім'я"
+  },
+  {
+    "entity": "media",
+    "operation": "write",
+    "title": "Фото"
+  },
+  {
+    "entity": "origin",
+    "operation": "write",
+    "title": "Дата/адреса прибуття"
+  },
+  {
+    "entity": "general",
+    "operation": "write",
+    "title": "Тип/стать/вага/вік тварини"
+  },
+  {
+    "entity": "owner",
+    "operation": "write",
+    "title": "Інформація про власника"
+  },
+  {
+    "entity": "comment",
+    "operation": "write",
+    "title": "Загальний коментар"
+  },
+  {
+    "entity": "adoption",
+    "operation": "write",
+    "title": "Прилаштування"
+  },
+  {
+    "entity": "death",
+    "operation": "write",
+    "title": "Смерть"
+  },
+  {
+    "entity": "sterilization",
+    "operation": "write",
+    "title": "Стерилізація/кастрація"
+  },
+  {
+    "entity": "microchipping",
+    "operation": "write",
+    "title": "Чіпування"
+  },
+  {
+    "entity": "vaccinations",
+    "operation": "write",
+    "title": "Вакцинація"
+  },
+  {
+    "entity": "diagnoses",
+    "operation": "write",
+    "title": "Хвороби і діагнози"
+  },
+  {
+    "entity": "procedures",
+    "operation": "write",
+    "title": "Процедури"
   }
 ]
