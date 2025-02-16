@@ -25,7 +25,7 @@ from src.users.models import User
 #     from src.media.models import MediaAsset
 
 logger = logging.getLogger(uvicorn.logging.__name__)
-router = APIRouter(prefix=settings.stats_prefix, tags=["stats"])
+router = APIRouter(prefix=settings.crm_prefix+settings.stats_prefix, tags=["crm", "stats"])
 stats_router_cache: Cache = Cache(owner=router, all_prefix="stats", ttl=settings.default_cache_ttl)
 
 
@@ -73,6 +73,25 @@ async def read_departments_stats(
             "Первомайськ",
         ],
         "data": data,
+    }
+
+    return response
+
+@router.get("/animals")
+async def read_animal_stats(
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["crm:read"]),
+    ) -> JSONResponse:
+    """Retrieves animal stats"""
+    total = randint(200, 400) #noqa: S311
+    sterilized = randint(10, total) #noqa: S311
+    adopted = randint(10, int(total*0.7)) #noqa: S311
+    dead = randint(1, total//10) #noqa: S311
+
+    response: dict[str, int] = {
+        "sterilized": sterilized,
+        "adopted": adopted,
+        "dead": dead,
+        "total": total,
     }
 
     return response
