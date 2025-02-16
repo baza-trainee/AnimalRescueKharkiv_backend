@@ -109,7 +109,7 @@ class Auth(metaclass=SingletonMeta):
         if not token:
             raise HTTPException(
                 status_code=401,
-                detail="Missing authentication token",
+                detail=RETURN_MSG.token_access_missing,
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return token
