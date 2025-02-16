@@ -173,7 +173,8 @@ async def read_locations(db: AsyncSession = Depends(get_db)) -> List[LocationRes
                                               seconds=settings.rate_limiter_seconds))])
 async def create_locations(models: List[LocationBase],
                         db: AsyncSession = Depends(get_db),
-                        _current_user: User = Security(authorization_service.authorize_user, scopes=["location:write"]),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["locations:write"]),
                     ) -> List[LocationResponse]:
     """Creates a new location definition. Returns the created location object"""
     locations: List[Location]
