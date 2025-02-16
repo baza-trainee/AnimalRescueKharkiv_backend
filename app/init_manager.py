@@ -150,7 +150,10 @@ class DataInitializer(AutoInitializer):
         for initializer in sorted(self._initializers.items()):
             name = initializer[1].__name__.removeprefix("__")
             logger.info(f"{name} executed")
-            await initializer[1](self)
+            try:
+                await initializer[1](self)
+            except Exception:
+                logger.exception(f"{name} failed with error:\n")
 
     async def run(self) -> None:
         """Executes the data initialization process"""
