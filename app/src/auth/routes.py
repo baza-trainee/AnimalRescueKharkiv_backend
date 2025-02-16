@@ -146,7 +146,6 @@ async def login(
     refresh_token, refresh_id = await auth_service.create_refresh_token(user=user, db=db)
     access_token = await auth_service.create_access_token(user=user, refresh_id=refresh_id, db=db)
 
-    logger.info(f"refersh_token={refresh_token}")
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
