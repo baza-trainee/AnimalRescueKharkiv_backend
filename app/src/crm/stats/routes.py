@@ -25,7 +25,7 @@ from src.users.models import User
 #     from src.media.models import MediaAsset
 
 logger = logging.getLogger(uvicorn.logging.__name__)
-router = APIRouter(prefix=settings.crm_prefix+settings.stats_prefix, tags=["crm", "stats"])
+router = APIRouter(prefix=settings.crm_prefix+settings.stats_prefix, tags=["crm-stats"])
 stats_router_cache: Cache = Cache(owner=router, all_prefix="stats", ttl=settings.default_cache_ttl)
 
 
