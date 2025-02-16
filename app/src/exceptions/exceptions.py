@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.configuration.settings import settings
+
 
 @dataclass(frozen=True)
 class ReturnMessages:
@@ -8,6 +10,7 @@ class ReturnMessages:
     user_not_found: str = "User '%s' not found"
     user_reg_failed: str = "User registration failed with error: %s"
     user_duplicate: str = "User '%s' already exists in '%s' domain"
+    user_pwd_invalid: str = settings.password_incorrect_message
 
     email_invalid: str = "Invalid email"
     email_sent: str = "%s email sent successfully"
@@ -19,6 +22,8 @@ class ReturnMessages:
     pwd_not_match: str = "Passwords do not match"
 
     token_invalid: str = "Invalid token"
+    token_refresh_missing: str = "Refresh token missing"
+    token_access_missing: str = "Access token missing"
     token_email_invalid: str = "Email does not match the token"
     token_scope_invalid: str = "Invalid scope in the token"
     token_credentials_error: str = "Could not validate credentials from token"

@@ -7,6 +7,10 @@
   {
     "domain": "global",
     "email": "jane_doe@example.com",
-    "password": "password5678!"
+    "password": "password5678!",
+    "role": {
+      "name": "user",
+      "domain": "global"
+    }
   }
 ]

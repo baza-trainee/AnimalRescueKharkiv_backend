@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 import uvicorn
+from sqlalchemy import desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.auth.models import SecurityToken, TokenType
@@ -38,6 +39,8 @@ class TokenManager(metaclass=SingletonMeta):
         """Reads a security token from database. Returns the retrieved security token"""
         statement = select(SecurityToken)
         statement = statement.filter_by(token=token, token_type=token_type)
+        statement = statement.order_by(desc(SecurityToken.created_at))
+        statement = statement.limit(1)
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
 

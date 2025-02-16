@@ -1,9 +1,9 @@
 import logging
 from datetime import timedelta
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 import uvicorn
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_limiter.depends import RateLimiter
 from pydantic import EmailStr
@@ -23,6 +23,9 @@ from src.roles.schemas import RoleBase
 from src.services.email import email_service
 from src.users.repository import users_repository
 from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserResponse, UserUpdate
+
+if TYPE_CHECKING:
+    from src.roles.models import Role
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.auth_prefix, tags=["auth"])
@@ -102,9 +105,10 @@ async def register_user(
                                  last_name=user_register.last_name,
                                  phone=user_register.phone)
         user = await users_repository.create_user(model=user_create, db=db)
-        role = token_payload["role"]
-        user_update = UserUpdate(role=RoleBase(domain=user.domain, name=role))
-        user = await users_repository.update_user(user=user, new_data=user_update, db=db)
+        role_name = token_payload["role"]
+        if role_name:
+            role: Role = await roles_repository.read_role(model=RoleBase(domain=user.domain, name=role_name), db=db)
+            user = await users_repository.assign_role_to_user(user=user, role=role, db=db)
         template_body = {
             "url": settings.url_login,
             "email": user.email,
@@ -131,6 +135,7 @@ async def register_user(
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
                   times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
 async def login(
+    response: Response,
     body: OAuth2PasswordWithDomainRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> TokenBase:
@@ -141,11 +146,20 @@ async def login(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.user_not_found % body.username)
     if body.password != user.password:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.pwd_invalid)
+
     refresh_token, refresh_id = await auth_service.create_refresh_token(user=user, db=db)
     access_token = await auth_service.create_access_token(user=user, refresh_id=refresh_id, db=db)
 
-    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        path="/auth",
+    )
 
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/logout", status_code=status.HTTP_200_OK,
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
@@ -167,17 +181,20 @@ async def logout(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RETURN_MSG.user_logout_failed)
 
 
-@router.post("/refresh", response_model=TokenBase, status_code=status.HTTP_200_OK,
-              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
-                  times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
+@router.post("/refresh", response_model=TokenBase, status_code=status.HTTP_200_OK)
 async def refresh_access_token(
-    refresh_token: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> TokenBase:
-    """Refreshes an access token or deletes an invalid token"""
+    """Refreshes an access token using the HTTP-only refresh token cookie"""
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.token_refresh_missing)
+
     user, refresh_id = await auth_service.validate_user_from_refresh_token(refresh_token=refresh_token, db=db)
     access_token = await auth_service.create_access_token(user=user, refresh_id=refresh_id, db=db)
-    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/password/forgot/{domain}/{email}", status_code=status.HTTP_202_ACCEPTED,

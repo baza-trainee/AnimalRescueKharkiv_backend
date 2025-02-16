@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone  #UTC
 from typing import List, Optional, Tuple
 
 import uvicorn
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Security, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -104,9 +104,19 @@ class Auth(metaclass=SingletonMeta):
 
         return token_record.token
 
+    @staticmethod
+    def _get_token(token: str = Security(oauth2_scheme)) -> str:
+        if not token:
+            raise HTTPException(
+                status_code=401,
+                detail=RETURN_MSG.token_access_missing,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return token
+
     async def get_access_token(
             self,
-            token: str = Depends(oauth2_scheme),
+            token: str = Depends(_get_token),
             db: AsyncSession = Depends(get_db),
     ) -> SecurityToken:
         """Resolves a token record"""
