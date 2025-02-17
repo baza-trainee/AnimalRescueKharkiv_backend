@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - release/dev
+      - release/uat
   schedule:
-    - cron: "0/5 7-20 * * *"
+    - cron: "0/5 5-21 * * *"
 
 jobs:
   ping:
@@ -14,6 +15,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Ping FastAPI app
+      - name: Ping DEV
         run: |
           curl -X GET https://animalrescuekharkiv-backend.onrender.com/healthcheck
+
+      - name: Ping UAT
+        run: |
+          curl -X GET https://animalrescuekharkiv-backend-xjom.onrender.com/healthcheck
