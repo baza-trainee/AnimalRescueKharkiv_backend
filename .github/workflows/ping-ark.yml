@@ -1,0 +1,24 @@
+name: Ping FastAPI App
+
+on:
+  push:
+    branches:
+      - release/dev
+      - release/uat
+  schedule:
+    - cron: "0/5 5-21 * * *"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Ping DEV
+        run: |
+          curl -X GET https://animalrescuekharkiv-backend.onrender.com/healthcheck
+
+      - name: Ping UAT
+        run: |
+          curl -X GET https://animalrescuekharkiv-backend-xjom.onrender.com/healthcheck
