@@ -1,0 +1,17 @@
+name: Start Render Web Services
+
+on:
+  push:
+    branches:
+      - release/dev
+  schedule:
+    - cron: "0 7 * * *" # Every day at 7:00 AM UTC (which corresponds to 10:00 AM Kyiv time)
+
+jobs:
+  start_service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Render Services
+        run: |
+          curl -X POST "https://api.render.com/v1/services/cupbchpopnds7392j3mg/start" \
+          -H "Authorization: Bearer rnd_8rqkfGCoMqcsZBEFSCIO1zVGIGR6"

@@ -1,0 +1,17 @@
+name: Stop Render Web Service
+
+on:
+  push:
+    branches:
+      - release/dev
+  schedule:
+    - cron: "59 20 * * *" # Every day at 8:59 PM UTC (which corresponds to 11:59 PM Kyiv time)
+
+jobs:
+  stop_service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop Render Service
+        run: |
+          curl -X POST "https://api.render.com/v1/services/cupbchpopnds7392j3mg/stop" \
+          -H "Authorization: Bearer rnd_8rqkfGCoMqcsZBEFSCIO1zVGIGR6"
