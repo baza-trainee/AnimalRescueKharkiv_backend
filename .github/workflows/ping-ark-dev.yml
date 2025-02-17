@@ -1,6 +1,9 @@
 name: Ping FastAPI App
 
 on:
+  push:
+    branches:
+      - release/dev
   schedule:
     - cron: "*/5 * * * *"
 
