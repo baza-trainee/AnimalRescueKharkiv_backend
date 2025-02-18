@@ -211,10 +211,10 @@ class AnimalResponse(DynamicResponse):
     microchipping: Optional[DynamicSection] = AuthorizableField(default=None)
 
     updated_at: datetime
-    updated_by: UserEmail
+    updated_by: Optional[UserEmail] = None
 
     created_at: datetime
-    created_by: UserEmail
+    created_by: Optional [UserEmail] = None
 
     @computed_field
     def current_location(self) -> AnimalLocationResponse | None:
