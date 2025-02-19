@@ -62,9 +62,11 @@ class UsersRepository(metaclass=SingletonMeta):
         expression.append(User.role.has(Role.title.ilike(any_(prefixes))))
         return or_(*expression)
 
-    async def search_users(self, *terms, db: AsyncSession) -> list[User]:
+    async def search_users(self, *terms, domain:str, db: AsyncSession) -> list[User]:
         """Searches all users by terms. Returns the retrieved user collection"""
         statement = select(User)
+        if domain:
+            statement = statement.filter_by(domain=domain.lower())
         condition: ColumnElement[bool] | None = self.__get_search_conditions(*terms)
         if condition is not None:
             statement = statement.filter(condition)
