@@ -8,6 +8,10 @@
     "operation": "create"
   },
   {
+    "entity": "security",
+    "operation": "administer"
+  },
+  {
     "entity": "locations",
     "operation": "write",
     "title": "Поточна локація"

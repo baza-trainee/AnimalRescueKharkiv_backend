@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     stats_prefix: str = "/stats"
     crm_prefix: str = "/crm"
     animals_prefix: str = "/animals"
-    password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])(?!.*\s).{8,14}$"
+    password_regex: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?!.*\s).{8,14}$"
     password_incorrect_message: str = ("The password length should be between 8 and 14 characters, "
         "the password must include at least 1 number, 1 letter and 1 special character")
     media_short_url_id: bool = True
