@@ -1,0 +1,15 @@
+name: Deploy to UAT
+
+on:
+  push:
+    branches:
+      - release/uat
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deployment
+        run: |
+          curl -X GET "https://api.render.com/deploy/srv-cupdlvpopnds73938vjg?key=TY5yh7vuSOc"
