@@ -33,7 +33,11 @@ users_router_cache: Cache = Cache(owner=router, all_prefix="users", ttl=settings
              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
                  times=settings.rate_limiter_times,
                  seconds=settings.rate_limiter_seconds))])
-async def create_users(models: List[UserCreate], db: AsyncSession = Depends(get_db)) -> List[UserResponse]:
+async def create_users(
+    models: List[UserCreate],
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+) -> List[UserResponse]:
     """Creates new users. Returns a list of created users"""
     users: List[UserResponse] = []
     try:
@@ -61,7 +65,7 @@ async def read_users(
     email: str = Query(default=None),
     domain: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user, scopes=["user:read"]),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     cache_key = users_router_cache.get_all_records_cache_key_with_params(
@@ -87,6 +91,7 @@ async def update_user(
     email: str,
     body: UserUpdate,
     db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
 ) -> UserResponse:
     """Updates user data. Returns the updated user"""
     user: User = None
@@ -149,7 +154,11 @@ async def change_user_password(
                dependencies=[Depends(RateLimiter(
                    times=settings.rate_limiter_times,
                    seconds=settings.rate_limiter_seconds))])
-async def delete_users(models: List[UserBase], db: AsyncSession = Depends(get_db)) -> None:
+async def delete_users(
+    models: List[UserBase],
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
+) -> None:
     """Deletes users"""
     users_to_delete = []
     for model in models:

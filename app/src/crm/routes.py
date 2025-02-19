@@ -74,7 +74,10 @@ async def read_animals( query: str  | None = Query(default=None,
                         limit: int | None = Query(default=20, ge=1, le=50,
                                 description="Records per response to show"),
                         sorting: Sorting = Depends(),
-                        db: AsyncSession = Depends(get_db)) -> List[AnimalResponse]:
+                        db: AsyncSession = Depends(get_db),
+                        current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["crm:read"]),
+                        ) -> List[AnimalResponse]:
     """Retrieves an animal by id. Returns the retrieved animal object"""
     cache_key = animals_router_cache.get_all_records_cache_key_with_params(
         query,
@@ -123,12 +126,17 @@ async def read_animals( query: str  | None = Query(default=None,
             await animals_router_cache.set(key=cache_key, value=animals)
     if not animals:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
+    for animal in animals:
+        animal.authorize_model_attributes(role=current_user.role)
     return animals
 
 
 @router.get(settings.animals_prefix + "/{animal_id}",  response_model=AnimalResponse)
 async def read_animal(animal_id: int,
-                        db: AsyncSession = Depends(get_db)) -> AnimalResponse:
+                        db: AsyncSession = Depends(get_db),
+                        current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["crm:read"]),
+                     ) -> AnimalResponse:
     """Retrieves an animal by id. Returns the retrieved animal object"""
     animal: AnimalResponse | None = None
     try:
@@ -144,11 +152,15 @@ async def read_animal(animal_id: int,
         raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     if not animal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
+    animal.authorize_model_attributes(role=current_user.role)
     return animal
 
 
 @router.get("/locations",  response_model=List[LocationResponse])
-async def read_locations(db: AsyncSession = Depends(get_db)) -> List[LocationResponse]:
+async def read_locations(db: AsyncSession = Depends(get_db),
+                         _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["crm:read"]),
+                        ) -> List[LocationResponse]:
     """Retrieves location definitions. Returns the retrieved locations"""
     locations: List[LocationResponse] = []
     try:
@@ -199,7 +211,10 @@ async def create_locations(models: List[LocationBase],
 
 
 @router.get("/animal_types",  response_model=List[AnimalTypeResponse])
-async def read_animal_types(db: AsyncSession = Depends(get_db)) -> List[AnimalTypeResponse]:
+async def read_animal_types(db: AsyncSession = Depends(get_db),
+                            _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["crm:read"]),
+                            ) -> List[AnimalTypeResponse]:
     """Retrieves animal type definitions. Returns the retrieved animal types"""
     anymal_types: List[AnimalTypeResponse] = []
     try:
@@ -302,7 +317,9 @@ async def create_animal(model: AnimalCreate,
         logger.exception("An error occured:\n")
         raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     await animals_router_cache.invalidate_all_keys()
-    return AnimalResponse.model_validate(animal)
+    animal = AnimalResponse.model_validate(animal)
+    animal.authorize_model_attributes(role=current_user.role)
+    return animal
 
 
 @router.delete(settings.animals_prefix + "/{animal_id}", status_code=status.HTTP_204_NO_CONTENT,
@@ -338,17 +355,18 @@ async def update_animal_section(animal_id: int,
                                 body: dict = Body(),
                                 db: AsyncSession = Depends(get_db),
                                 current_user: User = Security(authorization_service.authorize_user_for_section,
-                                                              scopes=["animal:read", "animal:write"]),
+                                                              scopes=["crm:read"]),
                                 ) -> AnimalResponse:
     """Updates animal object baased on JSON body. Returns updated animal"""
+    animal: Animal = None
     try:
-        animal:Animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
+        animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
         if not animal:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
         editing_lock = await animals_repository.read_editing_lock(animal_id=animal_id,
                                                                 section_name=section_name,
                                                                 db=db)
-        exprire_delta:timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
+        exprire_delta: timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
         if (not editing_lock
             or editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone()):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
@@ -371,12 +389,14 @@ async def update_animal_section(animal_id: int,
                 await animals_router_cache.invalidate_key(key=cache_key)
                 await animals_router_cache.invalidate_all_keys()
         animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
-        return AnimalResponse.model_validate(animal)
     except HTTPException:
         raise
     except Exception as err:
         logger.exception("An error occured:\n")
         raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    animal = AnimalResponse.model_validate(animal)
+    animal.authorize_model_attributes(role=current_user.role)
+    return animal
 
 
 @router.post(settings.animals_prefix + "/{animal_id}/{section_name}/lock",
@@ -388,7 +408,7 @@ async def acquire_lock(animal_id: int,
                               section_name: str,
                               db: AsyncSession = Depends(get_db),
                               current_user: User = Security(authorization_service.authorize_user_for_section,
-                                                              scopes=["animal:read", "animal:write"]),
+                                                              scopes=["crm:read"]),
                              ) -> EditingLockResponse:
     """Acquires lock on section for context user. Returns the acquired lock"""
     try:
@@ -424,7 +444,7 @@ async def release_lock(animal_id: int,
                         section_name: str,
                         db: AsyncSession = Depends(get_db),
                         current_user: User = Security(authorization_service.authorize_user_for_section,
-                                                        scopes=["animal:read", "animal:write"]),
+                                                        scopes=["crm:read"]),
                     ) -> None:
     """Deletes the animal by ID"""
     try:
