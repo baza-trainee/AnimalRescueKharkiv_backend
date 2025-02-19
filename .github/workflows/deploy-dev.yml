@@ -1,0 +1,15 @@
+name: Deploy to DEV
+
+on:
+  push:
+    branches:
+      - release/dev
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deployment
+        run: |
+          curl -X GET "https://api.render.com/deploy/srv-cupbchpopnds7392j3mg?key=0HdB10irUeI"
