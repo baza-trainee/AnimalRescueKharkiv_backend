@@ -18,7 +18,6 @@ class UserExt(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
-    role: Optional[RoleBase] = None
     photo: Optional[UUIDReferenceBase] = None
 
 
@@ -32,6 +31,7 @@ def validate_password(value: str) -> str:
 
 class UserCreate(UserBase, UserExt):
     password: str
+    role: Optional[RoleBase] = None
 
     validate_password = field_validator("password")(validate_password)
 

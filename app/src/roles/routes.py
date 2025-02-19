@@ -2,12 +2,13 @@ import logging
 from typing import TYPE_CHECKING, List
 
 import uvicorn
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_limiter.depends import RateLimiter
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
@@ -15,6 +16,7 @@ from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase, RoleResponse, RoleUpdate
 from src.services.cache import Cache
+from src.users.models import User
 
 if TYPE_CHECKING:
     from src.roles.models import Role
@@ -26,6 +28,8 @@ roles_router_cache: Cache = Cache(owner=router, all_prefix="roles", ttl=settings
 @router.get("/",  response_model=List[RoleResponse])
 async def read_roles(name: str = Query(default=None),
                            domain: str = Query(default=None),
+                           _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["security:administer"]),
                            db: AsyncSession = Depends(get_db)) -> List[RoleResponse]:
     """Retrieves all roles with optional filtering. Returns list of role objects"""
     cache_key = roles_router_cache.get_all_records_cache_key_with_params(
@@ -52,6 +56,8 @@ async def read_roles(name: str = Query(default=None),
                                               seconds=settings.rate_limiter_seconds))])
 async def create_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                            scopes=["system:admin"]),
                     ) -> List[RoleResponse]:
     """Creates new roles. Returns list of created role objects"""
     roles: List[Role] = []
@@ -77,6 +83,8 @@ async def create_roles(models: List[RoleBase],
                                               seconds=settings.rate_limiter_seconds))])
 async def delete_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                            scopes=["system:admin"]),
                     ) -> None:
     """Deletes roles"""
     roles_to_delete = [
@@ -98,6 +106,8 @@ async def delete_roles(models: List[RoleBase],
                                               seconds=settings.rate_limiter_seconds))])
 async def update_role(domain: str, role_name: str, body: RoleUpdate,
                                                           db: AsyncSession = Depends(get_db),
+                            _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["security:administer"]),
                     ) -> RoleResponse:
     """Updates permissions for role. Returns updated role object"""
     role:RoleResponse = None

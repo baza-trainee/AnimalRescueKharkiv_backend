@@ -22,7 +22,7 @@ from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase
 from src.services.email import email_service
 from src.users.repository import users_repository
-from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserResponse, UserUpdate
+from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserResponse
 
 if TYPE_CHECKING:
     from src.roles.models import Role
