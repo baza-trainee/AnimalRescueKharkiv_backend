@@ -1,9 +1,11 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import uvicorn
+from sqlalchemy import Select, and_, any_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from src.media.models import MediaAsset
 from src.roles.models import Role
 from src.singleton import SingletonMeta
@@ -45,6 +47,27 @@ class UsersRepository(metaclass=SingletonMeta):
             statement = statement.filter_by(email=email.lower())
         if domain:
             statement = statement.filter_by(domain=domain.lower())
+        result = await db.execute(statement)
+        users = result.unique().scalars().all()
+        return list(users)
+
+    def __get_search_conditions(self, *terms) -> ColumnElement[bool] | None:
+        if not terms:
+            return None
+        prefixes: List[str] = [prefix + "%" for prefix in terms]
+        expression: List[ColumnExpressionArgument[bool]] = []
+        expression.append(func.lower(User.email).ilike(any_(prefixes)))
+        expression.append(func.lower(User.first_name).ilike(any_(prefixes)))
+        expression.append(func.lower(User.last_name).ilike(any_(prefixes)))
+        expression.append(User.role.has(Role.title.ilike(any_(prefixes))))
+        return or_(*expression)
+
+    async def search_users(self, *terms, db: AsyncSession) -> list[User]:
+        """Searches all users by terms. Returns the retrieved user collection"""
+        statement = select(User)
+        condition: ColumnElement[bool] | None = self.__get_search_conditions(*terms)
+        if condition is not None:
+            statement = statement.filter(condition)
         result = await db.execute(statement)
         users = result.unique().scalars().all()
         return list(users)

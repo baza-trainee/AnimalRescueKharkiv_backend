@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import TYPE_CHECKING, List
 
 import uvicorn
@@ -66,7 +67,7 @@ async def read_users(
     email: str = Query(default=None),
     domain: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     cache_key = users_router_cache.get_all_records_cache_key_with_params(
@@ -76,6 +77,31 @@ async def read_users(
     users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
         users = await users_repository.read_users(email=email, domain=domain, db=db)
+        users = [UserResponse.model_validate(user) for user in users]
+        if users:
+            await users_router_cache.set(key=cache_key, value=users)
+    if not users:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % "")
+    return users
+
+
+def __get_terms_from_query(query: str) -> set[str]:
+    terms = re.split(r"[;,|\s]+", query)
+    return set(terms)
+
+
+@router.get("/search",  response_model=List[UserResponse])
+async def search_users(
+    query: str = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
+) -> List[UserResponse]:
+    """Retrieves all users with optional filtering. Returns a list of users"""
+    terms = __get_terms_from_query(query=query)
+    cache_key = users_router_cache.get_all_records_cache_key_with_params(*terms)
+    users: List[UserResponse] = await users_router_cache.get(key=cache_key)
+    if not users:
+        users = await users_repository.search_users(*terms, db=db)
         users = [UserResponse.model_validate(user) for user in users]
         if users:
             await users_router_cache.set(key=cache_key, value=users)
