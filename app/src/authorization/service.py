@@ -41,7 +41,7 @@ class Authorization(metaclass=SingletonMeta):
             scopes: SecurityScopes,
             current_security_token: SecurityToken = Depends(auth_service.get_access_token),
             ) -> User:
-        """Authorizes user access for specific named data section. Returns the authorized user"""
+        """Authorizes user access for self or by scopes. Returns the authorized user"""
         user: User = current_security_token.user
         if domain == user.domain and email == user.email:
             return user
