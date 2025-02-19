@@ -1,19 +1,19 @@
 # mypy: disable-error-code="assignment"
 import enum
+import logging
 import re
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Callable, ClassVar, List, Optional, Type
 
+import uvicorn
 from fastapi import HTTPException, Query, status
 from pydantic import (
-    UUID4,
     BaseModel,
     ConfigDict,
     Field,
     PlainSerializer,
     PlainValidator,
-    Strict,
     computed_field,
     field_validator,
     model_serializer,
@@ -24,12 +24,15 @@ from src.configuration.settings import settings
 from src.crm.models import Gender
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.schemas import MediaAssetResponse
+from src.roles.models import Role
 from src.users.schemas import UserResponse
 
 SixDigitID = Annotated[int, PlainSerializer(lambda x: str(x).zfill(6), return_type=str)]
 UserEmail = Annotated[UserResponse, PlainSerializer(lambda x: x.email, return_type=str)]
 
-def validate_past_or_present(value: date) -> date:
+logger = logging.getLogger(uvicorn.logging.__name__)
+
+def validate_past_or_present(value: date | str) -> date:
     """Validates value for past or present date"""
     if isinstance(value, str):
         value = date.fromisoformat(value)
@@ -37,7 +40,7 @@ def validate_past_or_present(value: date) -> date:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
     return value
 
-PastOrPresentDate = Annotated[date, PlainValidator(validate_past_or_present)]
+PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present)]
 SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class DynamicSection(BaseModel):
@@ -59,7 +62,7 @@ class AuthorizableField:
 
 
 class DynamicResponse(BaseModel):
-    editable_attributes: List[str] = []
+    editable_attributes: List[str] =[]
 
     @classmethod
     def __get_instance_attributes(cls, instance: DeclarativeMeta) -> dict:
@@ -104,6 +107,20 @@ class DynamicResponse(BaseModel):
 
         return super().model_validate(cls.__structure_instance_data(instance_data=instance_data))
 
+    def authorize_model_attributes(self, role: Role) -> None:
+        """Authorizes user access to response model attibutes."""
+        self.editable_attributes = []
+        if self.__is_system_admin(role=role):
+            self.editable_attributes = list(self._authorizable_attributes)
+        else:
+            permission_entities = [perm.entity for perm in role.permissions if perm.operation == "write"]
+            for attr_name in self._authorizable_attributes:
+                if attr_name in permission_entities:
+                    self.editable_attributes.append(attr_name)
+
+    def __is_system_admin(self, role: Role) -> bool:
+        return (role.name == settings.super_user_role) and (role.domain == settings.super_user_domain)
+
     def __serialize_value(self, value: datetime|Decimal|str) -> datetime|float|str:
         if isinstance(value, datetime):
             return value.isoformat()
@@ -118,11 +135,6 @@ class DynamicResponse(BaseModel):
         return {key: self.__serialize_value(value)
                 for key, value in serialized_data.items()
                 if value is not None}
-
-    @property
-    def authorizable_attributes(self) -> List[str]:
-        """Returns authorizable data sections"""
-        return self._authorizable_attributes
 
 
 class LocationBase(BaseModel):
