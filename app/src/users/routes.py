@@ -14,6 +14,7 @@ from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.repository import media_repository
 from src.roles.repository import roles_repository
+from src.roles.schemas import RoleBase
 from src.services.cache import Cache
 from src.services.email import email_service
 from src.users.models import User
@@ -91,7 +92,7 @@ async def update_user(
     email: str,
     body: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
+    _current_user: User = Security(authorization_service.authorize_user_or_self, scopes=["system:admin"]),
 ) -> UserResponse:
     """Updates user data. Returns the updated user"""
     user: User = None
@@ -101,9 +102,6 @@ async def update_user(
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % email)
         user = await users_repository.update_user(user=user, new_data=body, db=db)
-        if body.role and body.role.name and body.role.domain:
-            role: Role = await roles_repository.read_role(model=body.role, db=db)
-            user = await users_repository.assign_role_to_user(user=user, role=role, db=db)
         if body.photo and body.photo.id:
             photo: MediaAsset = await media_repository.read_media_asset(media_asset_id=body.photo.id, db=db)
             user = await users_repository.assign_photo_to_user(user=user, photo=photo, db=db)
@@ -113,7 +111,33 @@ async def update_user(
     return user
 
 
-@router.patch("/password/{domain}/{email}", response_model=UserResponse, status_code=status.HTTP_200_OK,
+@router.patch("/{domain}/{email}/role", response_model=UserResponse, status_code=status.HTTP_200_OK,
+              description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
+                  times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
+async def update_user_role(
+    domain: str,
+    email: str,
+    body: RoleBase,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
+) -> UserResponse:
+    """Updates user's role. Returns the updated user"""
+    user: User = None
+    try:
+        user_model = UserBase(email=email, domain=domain)
+        user = await users_repository.read_user(model=user_model, db=db)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % email)
+        if body.name and body.domain:
+            role: Role = await roles_repository.read_role(model=body, db=db)
+            user = await users_repository.assign_role_to_user(user=user, role=role, db=db)
+    except ValidationError as err:
+        raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)
+    await users_router_cache.invalidate_all_keys()
+    return user
+
+
+@router.patch("/{domain}/{email}/password", response_model=UserResponse, status_code=status.HTTP_200_OK,
               description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
                   times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
 async def change_user_password(
@@ -123,6 +147,7 @@ async def change_user_password(
     background_tasks: BackgroundTasks,
     language: str = "UA",
     db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user_or_self, scopes=["system:admin"]),
 ) -> UserResponse:
     """Change user password if the "entered password" matches the current user password and "new password" is correct.
     Returns updated user

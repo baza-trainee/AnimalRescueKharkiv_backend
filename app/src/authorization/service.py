@@ -35,6 +35,19 @@ class Authorization(metaclass=SingletonMeta):
         return await self.__do_authorize_user(scopes=scopes,
                                         current_security_token=current_security_token)
 
+    async def authorize_user_or_self(
+            self, domain: str,
+            email: str,
+            scopes: SecurityScopes,
+            current_security_token: SecurityToken = Depends(auth_service.get_access_token),
+            ) -> User:
+        """Authorizes user access for specific named data section. Returns the authorized user"""
+        user: User = current_security_token.user
+        if domain == user.domain and email == user.email:
+            return user
+        return await self.__do_authorize_user(scopes=scopes,
+                                        current_security_token=current_security_token)
+
     async def __do_authorize_user(self, scopes: SecurityScopes, current_security_token: SecurityToken) -> User:
         permissions: List[str] = auth_service.get_permissions_from_token(current_security_token.token)
         required_permissions: set = set(scopes.scopes)
