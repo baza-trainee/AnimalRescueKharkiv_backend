@@ -25,7 +25,10 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.roles_prefix, tags=["roles"])
 roles_router_cache: Cache = Cache(owner=router, all_prefix="roles", ttl=settings.default_cache_ttl)
 
-@router.get("/",  response_model=List[RoleResponse])
+@router.get("/",  response_model=List[RoleResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_roles(name: str = Query(default=None),
                            domain: str = Query(default=None),
                            _current_user: User = Security(authorization_service.authorize_user,
@@ -57,7 +60,7 @@ async def read_roles(name: str = Query(default=None),
 async def create_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                     ) -> List[RoleResponse]:
     """Creates new roles. Returns list of created role objects"""
     roles: List[Role] = []
@@ -84,7 +87,7 @@ async def create_roles(models: List[RoleBase],
 async def delete_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                     ) -> None:
     """Deletes roles"""
     roles_to_delete = [

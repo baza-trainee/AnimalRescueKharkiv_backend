@@ -24,7 +24,10 @@ router = APIRouter(prefix=settings.media_prefix, tags=["media"])
 media_router_cache: Cache = Cache(owner=router, all_prefix="media_assets", ttl=settings.default_cache_ttl)
 
 
-@router.get(settings.media_assets_prefix,  response_model=List[MediaAssetResponse])
+@router.get(settings.media_assets_prefix,  response_model=List[MediaAssetResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_media_assets(from_date: datetime =  Query(default=None, description="Filter media assets by FROM date"),
                         to_date: datetime =  Query(default=None, description="Filter media assets by TO date"),
                         media_type: str =  Query(default=None,
@@ -61,7 +64,10 @@ async def read_media_assets(from_date: datetime =  Query(default=None, descripti
     return media_assets
 
 
-@router.get(settings.media_assets_prefix + "/{media_id}",  response_model=MediaAssetResponse)
+@router.get(settings.media_assets_prefix + "/{media_id}",  response_model=MediaAssetResponse,
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_media_asset(media_id: UUID4,
                         db: AsyncSession = Depends(get_db),
                     ) -> MediaAssetResponse:

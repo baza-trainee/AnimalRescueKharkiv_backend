@@ -24,7 +24,10 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.permissions_prefix, tags=["permissions"])
 permissions_router_cache: Cache = Cache(owner=router, all_prefix="permissions", ttl=settings.default_cache_ttl)
 
-@router.get("/",  response_model=List[PermissionResponse])
+@router.get("/",  response_model=List[PermissionResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_permissions(entity: str = Query(default=None),
                            operation: str = Query(default=None),
                            has_title: Optional[bool] = Query(default=True),
@@ -58,7 +61,7 @@ async def read_permissions(entity: str = Query(default=None),
 async def create_permissions(models: List[PermissionBase],
                                 db: AsyncSession = Depends(get_db),
                                 _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                             ) -> List[PermissionResponse]:
     """Creates new permissions. Returns list of created permission objects"""
     permissions: List[PermissionResponse] = []
@@ -85,7 +88,7 @@ async def create_permissions(models: List[PermissionBase],
 async def remove_permissions(models: List[PermissionBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                         ) -> None:
     """Deletes permissions"""
     permissions_to_delete = [
@@ -111,7 +114,7 @@ async def update_permission_title(entity: str,
                                   body: PermissionUpdate,
                                   db: AsyncSession = Depends(get_db),
                                   _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                                  ) -> PermissionResponse:
     """Updates permission's title. Returns updated permission object"""
     permission:PermissionResponse = None

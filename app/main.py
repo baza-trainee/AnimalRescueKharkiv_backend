@@ -22,6 +22,7 @@ from init_manager import DataInitializer
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, close_all_sessions
 from src.auth.managers import token_manager
+from src.auth.service import auth_service
 from src.configuration.db import SessionLocal, engine, get_db
 from src.configuration.redis import redis_client_async
 from src.configuration.settings import settings
@@ -61,7 +62,7 @@ async def lifespan(initialized_app: FastAPI) -> AsyncGenerator[None, Any]:
     #startup initialization goes here
     scheduler: Scheduler = Scheduler(frequency=settings.scheduler_frequency, loop=asyncio.get_event_loop())
     logger.info("FastAPI applicaiton started...")
-    await FastAPILimiter.init(redis_client_async)
+    await FastAPILimiter.init(redis_client_async, identifier=auth_service.auth_or_refresh_token_key)
     __init_routes(initialized_app=initialized_app)
     await __init_data()
     __init_scheduled_jobs(scheduler=scheduler)

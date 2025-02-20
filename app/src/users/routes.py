@@ -38,7 +38,7 @@ users_router_cache: Cache = Cache(owner=router, all_prefix="users", ttl=settings
 async def create_users(
     models: List[UserCreate],
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=[settings.super_user_permission]),
 ) -> List[UserResponse]:
     """Creates new users. Returns a list of created users"""
     users: List[UserResponse] = []
@@ -62,12 +62,15 @@ async def create_users(
     return users
 
 
-@router.get("/",  response_model=List[UserResponse])
+@router.get("/",  response_model=List[UserResponse],
+            description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_users(
     domain: str = Query(default=None),
     email: str = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=[settings.super_user_permission]),
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     cache_key = users_router_cache.get_all_records_cache_key_with_params(
@@ -84,7 +87,10 @@ async def read_users(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % "")
     return users
 
-@router.get("/{domain}",  response_model=List[UserResponse])
+@router.get("/{domain}",  response_model=List[UserResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_domain_users(
     domain: str,
     email: str = Query(default=None),
@@ -113,7 +119,10 @@ def __get_terms_from_query(query: str) -> set[str]:
     return set()
 
 
-@router.get("/{domain}/search",  response_model=List[UserResponse])
+@router.get("/{domain}/search",  response_model=List[UserResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def search_users(
     domain: str,
     query: str = Query(default=None),
@@ -142,7 +151,8 @@ async def update_user(
     email: str,
     body: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user_or_self, scopes=["system:admin"]),
+    _current_user: User = Security(authorization_service.authorize_user_or_self,
+                                   scopes=[settings.super_user_permission]),
 ) -> UserResponse:
     """Updates user data. Returns the updated user"""
     user: User = None
@@ -197,7 +207,8 @@ async def change_user_password(
     background_tasks: BackgroundTasks,
     language: str = "UA",
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Security(authorization_service.authorize_user_or_self, scopes=["system:admin"]),
+    _current_user: User = Security(authorization_service.authorize_user_or_self,
+                                   scopes=[settings.super_user_permission]),
 ) -> UserResponse:
     """Change user password if the "entered password" matches the current user password and "new password" is correct.
     Returns updated user

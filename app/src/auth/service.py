@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone  #UTC
 from typing import List, Optional, Tuple
 
 import uvicorn
-from fastapi import Depends, Header, HTTPException, Security, status
+from fastapi import Depends, Header, HTTPException, Request, Security, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -231,5 +231,10 @@ class Auth(metaclass=SingletonMeta):
             return payload[self.permissions_key]
         return None
 
+    async def auth_or_refresh_token_key(self, request: Request) -> str:
+        """Helper method that returns a key based n access or refresh token"""
+        auth_header = request.headers.get("Authorization")
+        refresh_token = request.cookies.get("refresh_token")
+        return auth_header if auth_header else refresh_token if refresh_token else "anonymous"
 
 auth_service: Auth = Auth()

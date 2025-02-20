@@ -42,7 +42,10 @@ animals_router_cache: Cache = Cache(owner=router, all_prefix="animals", ttl=sett
 animal_types_router_cache: Cache = Cache(owner=router, all_prefix="animal_types", ttl=settings.default_cache_ttl)
 locations_router_cache: Cache = Cache(owner=router, all_prefix="locations", ttl=settings.default_cache_ttl)
 
-@router.get(settings.animals_prefix,  response_model=List[AnimalResponse])
+@router.get(settings.animals_prefix,  response_model=List[AnimalResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_animals( query: str  | None = Query(default=None,
                                 description="Search query with names or IDs. Default: None"),
                         arrival_date: PastOrPresentDate | None = Query(default=None,
@@ -131,7 +134,10 @@ async def read_animals( query: str  | None = Query(default=None,
     return animals
 
 
-@router.get(settings.animals_prefix + "/{animal_id}",  response_model=AnimalResponse)
+@router.get(settings.animals_prefix + "/{animal_id}",  response_model=AnimalResponse,
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_animal(animal_id: int,
                         db: AsyncSession = Depends(get_db),
                         current_user: User = Security(authorization_service.authorize_user,
@@ -156,7 +162,10 @@ async def read_animal(animal_id: int,
     return animal
 
 
-@router.get("/locations",  response_model=List[LocationResponse])
+@router.get("/locations",  response_model=List[LocationResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_locations(db: AsyncSession = Depends(get_db),
                          _current_user: User = Security(authorization_service.authorize_user,
                                                        scopes=["crm:read"]),
@@ -210,7 +219,10 @@ async def create_locations(models: List[LocationBase],
     return locations
 
 
-@router.get("/animal_types",  response_model=List[AnimalTypeResponse])
+@router.get("/animal_types",  response_model=List[AnimalTypeResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_animal_types(db: AsyncSession = Depends(get_db),
                             _current_user: User = Security(authorization_service.authorize_user,
                                                        scopes=["crm:read"]),
@@ -239,7 +251,8 @@ async def read_animal_types(db: AsyncSession = Depends(get_db),
                                               seconds=settings.rate_limiter_seconds))])
 async def create_animal_types(models: List[AnimalTypeBase],
                         db: AsyncSession = Depends(get_db),
-                        _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=[settings.super_user_permission]),
                     ) -> List[AnimalTypeResponse]:
     """Creates a new animal type definition. Returns the created animal type object"""
     animal_types: List[AnimalType]
@@ -328,7 +341,8 @@ async def create_animal(model: AnimalCreate,
                                               seconds=settings.rate_limiter_seconds))])
 async def delete_animal(animal_id: int,
                         db: AsyncSession = Depends(get_db),
-                        _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=[settings.super_user_permission]),
                     ) -> None:
     """Deletes the animal by ID"""
     try:

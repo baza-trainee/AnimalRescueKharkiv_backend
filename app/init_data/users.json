@@ -1,16 +1,47 @@
 [
   {
-    "domain": "global",
-    "email": "john_doe@example.com",
-    "password": "secure1234!"
+    "domain": "crm",
+    "email": "admin@ark.ua",
+    "password": "Password123!",
+    "role": {
+      "name": "admin",
+      "domain": "crm"
+    }
   },
   {
-    "domain": "global",
-    "email": "jane_doe@example.com",
-    "password": "password5678!",
+    "domain": "crm",
+    "email": "driver@ark.ua",
+    "password": "Password123!",
     "role": {
-      "name": "user",
-      "domain": "global"
+      "name": "driver",
+      "domain": "crm"
+    }
+  },
+  {
+    "domain": "crm",
+    "email": "volunteer@ark.ua",
+    "password": "Password123!",
+    "role": {
+      "name": "volunteer",
+      "domain": "crm"
+    }
+  },
+  {
+    "domain": "crm",
+    "email": "doctor@ark.ua",
+    "password": "Password123!",
+    "role": {
+      "name": "doctor",
+      "domain": "crm"
+    }
+  },
+  {
+    "domain": "crm",
+    "email": "photographer@ark.ua",
+    "password": "Password123!",
+    "role": {
+      "name": "photographer",
+      "domain": "crm"
     }
   }
 ]
