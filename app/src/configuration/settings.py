@@ -26,14 +26,14 @@ class Settings(BaseSettings):
     crm_prefix: str = "/crm"
     animals_prefix: str = "/animals"
     password_regex_str: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?!.*\s).{8,14}$"
-    password_incorrect_message: str = ("The password length should be between 8 and 14 characters, "
-        "the password must include at least 1 number and 1 letter")
+    password_incorrect_message: str = ("Password must be 8 to 14 characters long "
+                                        "and include at least one letter and one number")
     phone_regex_str: str = r"\+380\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}"
     phone_invalid_message: str = "Invalid phone number format. Expected: +380 xx xxx xx xx"
     email_restricted_domains: str = ".ru,.by,.рф"
     email_regex_str: str = r"^[a-zA-Z0-9._%+-]{2,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    email_invalid_format_message: str = ("Email should have at least 2 characters in the local part "
-                                         "and at least 2 characters in domain zone")
+    email_invalid_format_message: str = ("The local part must contain only ASCII characters and have at least 2 "
+                                         "characters. The domain zone must also be at least 2 characters long.")
     media_short_url_id: bool = True
     default_cache_ttl: int = 15 * 60 # 15 minutes
     sqlalchemy_database_url: str
