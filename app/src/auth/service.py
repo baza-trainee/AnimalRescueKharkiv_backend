@@ -232,7 +232,7 @@ class Auth(metaclass=SingletonMeta):
         return None
 
     async def auth_or_refresh_token_key(self, request: Request) -> str:
-        """Helper method that return Authorization header value"""
+        """Helper method that returns a key based n access or refresh token"""
         auth_header = request.headers.get("Authorization")
         refresh_token = request.cookies.get("refresh_token")
         return auth_header if auth_header else refresh_token if refresh_token else "anonymous"
