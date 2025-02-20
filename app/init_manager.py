@@ -86,7 +86,7 @@ class DataInitializer(AutoInitializer):
                 user_obj = UserCreate(**user)
                 existing = await users_repository.read_user(user_obj, self.db)
                 if not existing:
-                    await users_repository.create_user(user_obj, self.db)
+                    existing = await users_repository.create_user(user_obj, self.db)
                 if user_obj.role and user_obj.role.name and user_obj.role.domain:
                     role = await roles_repository.read_role(user_obj.role, self.db)
                     if role and (not existing.role or existing.role.id != role.id):
