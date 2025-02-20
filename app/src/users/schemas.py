@@ -22,6 +22,9 @@ PhoneStr = Annotated[str | None, PlainValidator(validate_phone)]
 
 def validate_email(value: EmailStr) -> EmailStr:
     """Validates email value"""
+    if not settings.email_regex.fullmatch(value):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=RETURN_MSG.user_email_invalid_format)
     if value.endswith(settings.email_restricted_domains_list):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=RETURN_MSG.user_email_invalid % ", ".join(settings.email_restricted_domains_list))

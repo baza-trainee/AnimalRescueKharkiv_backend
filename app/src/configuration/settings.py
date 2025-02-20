@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     phone_regex_str: str = r"\+380\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}"
     phone_invalid_message: str = "Invalid phone number format. Expected: +380 xx xxx xx xx"
     email_restricted_domains: str = ".ru,.by,.рф"
+    email_regex_str: str = r"^[\w.-]{2,}@[\w.-]+.[a-zA-Z]{2,}$"
+    email_invalid_format_message: str = ("Email should have at least 2 characters in the local part "
+                                         "and at least 2 characters in domain zone")
     media_short_url_id: bool = True
     default_cache_ttl: int = 15 * 60 # 15 minutes
     sqlalchemy_database_url: str
@@ -109,5 +112,10 @@ class Settings(BaseSettings):
     def phone_regex(self) -> Pattern[str]:
         """Property returns phone regex"""
         return re.compile(rf"{self.phone_regex_str}")
+
+    @property
+    def email_regex(self) -> Pattern[str]:
+        """Property returns email regex"""
+        return re.compile(rf"{self.email_regex_str}")
 
 settings = Settings()

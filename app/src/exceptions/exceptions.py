@@ -13,6 +13,7 @@ class ReturnMessages:
     user_pwd_invalid: str = settings.password_incorrect_message
     user_phone_invalid: str = settings.phone_invalid_message
     user_email_invalid: str = "Emails with the following domains are not allowed: %s"
+    user_email_invalid_format: str = settings.email_invalid_format_message
 
     email_invalid: str = "Invalid email"
     email_sent: str = "%s email sent successfully"
