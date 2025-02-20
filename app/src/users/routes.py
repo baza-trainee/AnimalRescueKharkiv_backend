@@ -62,7 +62,10 @@ async def create_users(
     return users
 
 
-@router.get("/",  response_model=List[UserResponse])
+@router.get("/",  response_model=List[UserResponse],
+            description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_users(
     domain: str = Query(default=None),
     email: str = Query(default=None),
@@ -84,7 +87,10 @@ async def read_users(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.user_not_found % "")
     return users
 
-@router.get("/{domain}",  response_model=List[UserResponse])
+@router.get("/{domain}",  response_model=List[UserResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_domain_users(
     domain: str,
     email: str = Query(default=None),
@@ -113,7 +119,10 @@ def __get_terms_from_query(query: str) -> set[str]:
     return set()
 
 
-@router.get("/{domain}/search",  response_model=List[UserResponse])
+@router.get("/{domain}/search",  response_model=List[UserResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def search_users(
     domain: str,
     query: str = Query(default=None),

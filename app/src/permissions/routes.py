@@ -24,7 +24,10 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.permissions_prefix, tags=["permissions"])
 permissions_router_cache: Cache = Cache(owner=router, all_prefix="permissions", ttl=settings.default_cache_ttl)
 
-@router.get("/",  response_model=List[PermissionResponse])
+@router.get("/",  response_model=List[PermissionResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
 async def read_permissions(entity: str = Query(default=None),
                            operation: str = Query(default=None),
                            has_title: Optional[bool] = Query(default=True),
