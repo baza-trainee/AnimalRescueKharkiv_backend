@@ -11,6 +11,9 @@ class ReturnMessages:
     user_reg_failed: str = "User registration failed with error: %s"
     user_duplicate: str = "User '%s' already exists in '%s' domain"
     user_pwd_invalid: str = settings.password_incorrect_message
+    user_phone_invalid: str = settings.phone_invalid_message
+    user_email_invalid: str = "Emails with the following domains are not allowed: %s"
+    user_email_invalid_format: str = settings.email_invalid_format_message
 
     email_invalid: str = "Invalid email"
     email_sent: str = "%s email sent successfully"

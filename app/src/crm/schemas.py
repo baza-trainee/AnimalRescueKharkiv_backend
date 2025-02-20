@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Annotated, Callable, ClassVar, List, Optional, Type
 
 import uvicorn
+from dateutil import parser  # type: ignore[import-untyped]
 from fastapi import HTTPException, Query, status
 from pydantic import (
     BaseModel,
@@ -32,19 +33,52 @@ UserEmail = Annotated[UserResponse, PlainSerializer(lambda x: x.email, return_ty
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
-def validate_past_or_present(value: date | str) -> date:
+def validate_past_or_present(value: date | str) -> date | str:
     """Validates value for past or present date"""
+    dt_val: date = None
     if isinstance(value, str):
-        value = date.fromisoformat(value)
-    if value > datetime.now().date():
+        try:
+            dt_val = parser.parse(value).date()
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid date format. Use a recognizable date format like YYYY-MM-DD or DD/MM/YYYY.",
+            )
+    if dt_val > datetime.now().date():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
-    return value
+    return dt_val
+
 
 PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present)]
 SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class DynamicSection(BaseModel):
-        model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow")
+
+    def __serialize_value(self, value: datetime|date|Decimal|str) -> datetime|float|str:
+        logger.debug(f"{type(value)}={value}")
+        if isinstance(value, (datetime, date)):
+            return value.strftime("%d/%m/%Y")
+        if isinstance(value, Decimal):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                parsed_value = parser.parse(value)
+                if parsed_value.hour or parsed_value.minute or parsed_value.second:
+                    return parsed_value.strftime("%d/%m/%Y %H:%M:%S")
+                return parsed_value.strftime("%d/%m/%Y")
+            except parser.ParserError:
+                pass
+        return value
+
+
+    @model_serializer(mode="wrap")
+    def custom_serializer(self, handler:Callable) -> dict:
+        """Serializes pydantic model to dict"""
+        serialized_data = handler(self)
+        return {key: self.__serialize_value(value)
+                for key, value in serialized_data.items()
+                if value is not None}
 
 
 class AuthorizableField:
@@ -121,12 +155,21 @@ class DynamicResponse(BaseModel):
     def __is_system_admin(self, role: Role) -> bool:
         return (role.name == settings.super_user_role) and (role.domain == settings.super_user_domain)
 
-    def __serialize_value(self, value: datetime|Decimal|str) -> datetime|float|str:
-        if isinstance(value, datetime):
-            return value.isoformat()
+    def __serialize_value(self, value: datetime|date|Decimal|str) -> datetime|float|str:
+        if isinstance(value, (datetime, date)):
+            return value.strftime("%d/%m/%Y")
         if isinstance(value, Decimal):
             return float(value)
+        if isinstance(value, str):
+            try:
+                parsed_value = parser.parse(value)
+                if parsed_value.hour or parsed_value.minute or parsed_value.second:
+                    return parsed_value.strftime("%d/%m/%Y %H:%M:%S")
+                return parsed_value.strftime("%d/%m/%Y")
+            except parser.ParserError:
+                pass
         return value
+
 
     @model_serializer(mode="wrap")
     def custom_serializer(self, handler:Callable) -> dict:
@@ -159,13 +202,13 @@ class VaccinationBase(BaseModel):
 
 
 class DiagnosisBase(BaseModel):
-    name: Optional[str] = Field(default=None, max_length=100)
+    name: Optional[str] = Field(default=None, max_length=200)
     date: Optional[PastOrPresentDate] = None
     comment: Optional[str] = Field(default=None, max_length=500)
 
 
 class ProcedureBase(BaseModel):
-    name: Optional[str] = Field(default=None, max_length=100)
+    name: Optional[str] = Field(default=None, max_length=200)
     date: Optional[PastOrPresentDate] = None
     comment: Optional[str] = Field(default=None, max_length=500)
 

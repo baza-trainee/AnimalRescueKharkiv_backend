@@ -130,7 +130,7 @@ class Diagnosis(Base):
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="diagnoses",
                                             lazy="joined")
-    name: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
+    name: Mapped[str] = mapped_column(String(200), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
 
@@ -142,7 +142,7 @@ class Procedure(Base):
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="procedures",
                                             lazy="joined")
-    name: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
+    name: Mapped[str] = mapped_column(String(200), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
 

@@ -15,7 +15,7 @@ class User(Base):
     email: Mapped[EmailType] = mapped_column(EmailType(), index=True, nullable=False)
     domain: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     password: Mapped[PasswordType] = mapped_column(PasswordType(schemes=["bcrypt"]), nullable=False)
-    first_name: Mapped[str] = mapped_column(String(50), index=False, nullable=True)
+    first_name: Mapped[str] = mapped_column(String(30), index=False, nullable=True)
     last_name: Mapped[str] = mapped_column(String(50), index=False, nullable=True)
     phone: Mapped[str] = mapped_column(String(30), index=False, unique=True, nullable=True)
     photo_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id, ondelete="SET NULL"), nullable=True)
