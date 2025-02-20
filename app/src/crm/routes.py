@@ -251,7 +251,8 @@ async def read_animal_types(db: AsyncSession = Depends(get_db),
                                               seconds=settings.rate_limiter_seconds))])
 async def create_animal_types(models: List[AnimalTypeBase],
                         db: AsyncSession = Depends(get_db),
-                        _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=[settings.super_user_permission]),
                     ) -> List[AnimalTypeResponse]:
     """Creates a new animal type definition. Returns the created animal type object"""
     animal_types: List[AnimalType]
@@ -340,7 +341,8 @@ async def create_animal(model: AnimalCreate,
                                               seconds=settings.rate_limiter_seconds))])
 async def delete_animal(animal_id: int,
                         db: AsyncSession = Depends(get_db),
-                        _current_user: User = Security(authorization_service.authorize_user, scopes=["system:admin"]),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=[settings.super_user_permission]),
                     ) -> None:
     """Deletes the animal by ID"""
     try:

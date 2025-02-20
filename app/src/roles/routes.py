@@ -60,7 +60,7 @@ async def read_roles(name: str = Query(default=None),
 async def create_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                     ) -> List[RoleResponse]:
     """Creates new roles. Returns list of created role objects"""
     roles: List[Role] = []
@@ -87,7 +87,7 @@ async def create_roles(models: List[RoleBase],
 async def delete_roles(models: List[RoleBase],
                         db: AsyncSession = Depends(get_db),
                         _current_user: User = Security(authorization_service.authorize_user,
-                                                            scopes=["system:admin"]),
+                                                            scopes=[settings.super_user_permission]),
                     ) -> None:
     """Deletes roles"""
     roles_to_delete = [
