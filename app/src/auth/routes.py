@@ -181,7 +181,9 @@ async def logout(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RETURN_MSG.user_logout_failed)
 
 
-@router.post("/refresh", response_model=TokenBase, status_code=status.HTTP_200_OK)
+@router.post("/refresh", response_model=TokenBase, status_code=status.HTTP_200_OK,
+             description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
+                  times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
 async def refresh_access_token(
     request: Request,
     db: AsyncSession = Depends(get_db),
