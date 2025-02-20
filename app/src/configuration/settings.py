@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     phone_regex_str: str = r"\+380\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}"
     phone_invalid_message: str = "Invalid phone number format. Expected: +380 xx xxx xx xx"
     email_restricted_domains: str = ".ru,.by,.рф"
-    email_regex_str: str = r"^[\w.-]{2,}@[\w.-]+.[a-zA-Z]{2,}$"
+    email_regex_str: str = r"^[a-zA-Z0-9._%+-]{2,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     email_invalid_format_message: str = ("Email should have at least 2 characters in the local part "
                                          "and at least 2 characters in domain zone")
     media_short_url_id: bool = True
