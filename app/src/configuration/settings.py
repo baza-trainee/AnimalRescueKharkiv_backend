@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     access_token_expire_mins: int = 45 # 45 minutes
     invitation_token_expire_days: int = 10 # 10 days
     refresh_token_expire_days: int = 7 # 7 days
-    reset_password_expire_mins: int = 15 # 15 minutes
+    reset_password_expire_mins: int = 30 # 30 minutes
     crm_editing_lock_expire_minutes: int = 15 # 15 minutes
 
     model_config = ConfigDict(extra="ignore",
