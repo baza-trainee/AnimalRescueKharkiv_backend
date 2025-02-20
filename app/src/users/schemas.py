@@ -57,6 +57,7 @@ class UserCreate(UserBase, UserExt):
 
 class UserResponse(UserBase, UserExt, ResponseReferenceBase):
     role: Optional[RoleResponse] = None
+    phone: Optional[str] = None
     photo: Optional[MediaAssetResponse] = None
     model_config = ConfigDict(from_attributes=True)
 
