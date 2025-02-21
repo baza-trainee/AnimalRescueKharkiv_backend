@@ -52,11 +52,16 @@ class Animal(Base):
     microchipping__date: Mapped[Date] = mapped_column(Date, index=True, nullable=True)
     microchipping__comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
 
-    updated_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), index=True)
+    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True),
+                                                 default=func.now(),
+                                                 onupdate=func.now(),
+                                                 index=True)
     updated_by_id: Mapped[UUID | None] = mapped_column(UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[updated_by_id])
 
-    created_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), index=True)
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True),
+                                                 default=func.now(),
+                                                 index=True)
     created_by_id: Mapped[UUID | None] = mapped_column(UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[created_by_id])
 
