@@ -44,6 +44,8 @@ def validate_past_or_present(value: date | str) -> date | str:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Invalid date format. Use a recognizable date format like YYYY-MM-DD or DD/MM/YYYY.",
             )
+    if not dt_val:
+        return value
     if dt_val > datetime.now().date():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
     return dt_val
@@ -59,7 +61,6 @@ class DynamicSection(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     def __serialize_value(self, value: datetime|date|Decimal|str) -> datetime|float|str:
-        logger.debug(f"{type(value)}={value}")
         if isinstance(value, (datetime, date)):
             return value.strftime("%d/%m/%Y")
         if isinstance(value, Decimal):
