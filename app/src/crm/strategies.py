@@ -1,35 +1,17 @@
-import inspect
 import logging
-import re
-import uuid
 from abc import ABC, abstractmethod
-from datetime import date
-from typing import Any, Awaitable, Callable, Dict, List, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Callable, Dict, List
 from uuid import UUID
 
 import uvicorn
-from sqlalchemy import Select, and_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
-from sqlalchemy.sql.elements import UnaryExpression
 from src.configuration.settings import settings
-from src.crm.models import Animal, AnimalLocation, AnimalType, Diagnosis, Gender, Location, Procedure, Vaccination
+from src.crm.models import Animal
 from src.crm.repository import animals_repository
 from src.crm.schemas import (
-    SORTING_VALIDATION_REGEX,
-    AnimalCreate,
-    AnimalLocationBase,
-    AnimalState,
-    AnimalTypeBase,
     BaseModel,
-    DiagnosisBase,
     IntReferenceBase,
-    LocationBase,
-    ProcedureBase,
-    UUIDReferenceBase,
-    VaccinationBase,
 )
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
@@ -37,6 +19,7 @@ from src.media.repository import media_repository
 from src.singleton import SingletonMeta
 from src.users.models import User
 
+logger = logging.getLogger(uvicorn.logging.__name__)
 
 class UpdateStrategy(ABC):
     @abstractmethod

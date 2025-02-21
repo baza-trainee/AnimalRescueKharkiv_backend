@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from src.authorization.service import authorization_service
+from src.base_schemas import Sorting
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.crm.models import Animal, AnimalType, Gender, Location
@@ -28,8 +29,8 @@ from src.crm.schemas import (
     LocationResponse,
     NamedSection,
     PastOrPresentDate,
-    Sorting,
 )
+from src.crm.stats.routes import stats_router_cache
 from src.crm.strategies import update_handler
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
@@ -330,6 +331,7 @@ async def create_animal(model: AnimalCreate,
         logger.exception("An error occured:\n")
         raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     await animals_router_cache.invalidate_all_keys()
+    await stats_router_cache.invalidate_all_keys()
     animal = AnimalResponse.model_validate(animal)
     animal.authorize_model_attributes(role=current_user.role)
     return animal
@@ -353,6 +355,7 @@ async def delete_animal(animal_id: int,
         await animals_repository.delete_animal(animal=animal, db=db)
         await animals_router_cache.invalidate_key(key=cache_key)
         await animals_router_cache.invalidate_all_keys()
+        await stats_router_cache.invalidate_all_keys()
     except HTTPException:
         raise
     except Exception as err:
@@ -382,7 +385,8 @@ async def update_animal_section(animal_id: int,
                                                                 db=db)
         exprire_delta: timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
         if (not editing_lock
-            or editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone()):
+            or (editing_lock.user.id != current_user.id
+                and editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone())):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail=RETURN_MSG.crm_lock_not_found % (section_name, current_user.email))
         if editing_lock.user.id != current_user.id:
@@ -402,6 +406,7 @@ async def update_animal_section(animal_id: int,
                 cache_key = animals_router_cache.get_cache_key(str(animal_id))
                 await animals_router_cache.invalidate_key(key=cache_key)
                 await animals_router_cache.invalidate_all_keys()
+                await stats_router_cache.invalidate_all_keys()
         animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
     except HTTPException:
         raise
