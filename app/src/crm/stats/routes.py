@@ -47,8 +47,8 @@ async def read_adotpion_countries_stats(
                                                                             to_date=query.to_date, db=db)
     logger.info(data)
     response = LabeledStats(
-        labels=[country[0] or "none" for country in data],
-        data=[country[1] for country in data],
+        labels=[country[0] for country in data if country[0]],
+        data=[country[1] for country in data if country[0]],
     )
     if response.labels and response.data:
         await stats_router_cache.set(key=cache_key, value=response)
@@ -72,8 +72,8 @@ async def read_departments_stats(
     data: List[Tuple[str | None, int]] = await stats_repository.get_animal_count_by_current_location(db=db)
 
     response = LabeledStats(
-        labels=[location[0] or "none" for location in data],
-        data=[location[1] for location in data],
+        labels=[location[0] for location in data if location[0]],
+        data=[location[1] for location in data if location[0]],
     )
     if response.labels and response.data:
         await stats_router_cache.set(key=cache_key, value=response)
