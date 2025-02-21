@@ -56,8 +56,14 @@ class UserBase(BaseModel):
 
 
 class UserExt(BaseModel):
-    first_name: Optional[str] = Field(default=None, min_length=2, max_length=30)
-    last_name: Optional[str] = Field(default=None, min_length=2, max_length=50)
+    first_name: Optional[str] = Field(default=None,
+                                      min_length=2,
+                                      max_length=30,
+                                      pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")
+    last_name: Optional[str] = Field(default=None,
+                                     min_length=2,
+                                     max_length=50,
+                                     pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")
     phone: Optional[PhoneStr] = None
     photo: Optional[UUIDReferenceBase] = None
 
