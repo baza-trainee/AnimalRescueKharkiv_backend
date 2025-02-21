@@ -12,6 +12,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from sqlalchemy.sql.elements import UnaryExpression
+from src.base_schemas import SORTING_VALIDATION_REGEX
 from src.configuration.settings import settings
 from src.crm.models import (
     Animal,
@@ -25,7 +26,6 @@ from src.crm.models import (
     Vaccination,
 )
 from src.crm.schemas import (
-    SORTING_VALIDATION_REGEX,
     AnimalCreate,
     AnimalLocationBase,
     AnimalLocationUpdate,
@@ -224,7 +224,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
 
     def __get_order_expression(self, sort: str) -> UnaryExpression[_T]:
         if not re.match(SORTING_VALIDATION_REGEX, sort):
-            raise ValueError(RETURN_MSG.crm_illegal_sort)
+            raise ValueError(RETURN_MSG.illegal_sort)
         field, direction = sort.split("|", 1)
         match direction.lower():
             case "asc":

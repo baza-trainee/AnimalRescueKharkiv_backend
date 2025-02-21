@@ -44,19 +44,22 @@ def validate_past_or_present(value: date | str) -> date | str:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Invalid date format. Use a recognizable date format like YYYY-MM-DD or DD/MM/YYYY.",
             )
+    if not dt_val:
+        return value
     if dt_val > datetime.now().date():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
     return dt_val
 
 
-PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present)]
-SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
+PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present), Field(
+        example="YYYY-MM-DD or DD/MM/YYYY",
+        json_schema_extra={"type": "date", "format": "<= datetime.now().date()"},
+    )]
 
 class DynamicSection(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     def __serialize_value(self, value: datetime|date|Decimal|str) -> datetime|float|str:
-        logger.debug(f"{type(value)}={value}")
         if isinstance(value, (datetime, date)):
             return value.strftime("%d/%m/%Y")
         if isinstance(value, Decimal):
@@ -439,18 +442,6 @@ class AnimalState(enum.Enum):
     active: str = "active"
     dead: str = "dead"
     adopted: str = "adopted"
-
-class Sorting(BaseModel):
-    sort: str | None = Query(default="created_at|desc",
-                                description="Sort option in format of {field}|{direction}. Default: created_at|desc")
-
-    @field_validator("sort")
-    @classmethod
-    def validate_regex(cls, value: str) -> str:
-        """Validates sorting option value via regular expression"""
-        if not re.match(SORTING_VALIDATION_REGEX, value):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.crm_illegal_sort)
-        return value
 
 
 class EditingLockResponse(BaseModel):
