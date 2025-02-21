@@ -62,6 +62,15 @@ async def create_users(
     await users_router_cache.invalidate_all_keys()
     return users
 
+@router.get("/me",  response_model=UserResponse,
+            description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
+async def read_me(
+    current_user: User = Security(authorization_service.authorize_user),
+) -> UserResponse:
+    """Retrieves context user"""
+    return current_user
 
 @router.get("/",  response_model=List[UserResponse],
             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
