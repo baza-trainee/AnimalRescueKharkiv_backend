@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     stats_prefix: str = "/stats"
     crm_prefix: str = "/crm"
     animals_prefix: str = "/animals"
-    password_regex_str: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?!.*\s).{8,14}$"
+    password_regex_str: str = r"^(?=.*[a-zA-Z])(?=.*\d)(?!.*\s).{8,14}[^a-zA-Z\d\s]*$"
     password_incorrect_message: str = ("Password must be 8 to 14 characters long "
                                         "and include at least one letter and one number")
     phone_regex_str: str = r"\+380\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}"
