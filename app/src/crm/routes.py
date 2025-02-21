@@ -438,6 +438,7 @@ async def acquire_lock(animal_id: int,
         if editing_lock:
             if (editing_lock.user.id != current_user.id
                     and editing_lock.created_at + exprire_delta >= datetime.now(timezone.utc).astimezone()):
+                logger.info(editing_lock.__dict__)
                 details: str = EditingLockResponse.model_validate(editing_lock).model_dump_json()
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
             if (editing_lock.user.id == current_user.id
@@ -449,6 +450,8 @@ async def acquire_lock(animal_id: int,
                                                                     section_name=section_name,
                                                                     user=current_user,
                                                                     db=db)
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("An error occured:\n")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

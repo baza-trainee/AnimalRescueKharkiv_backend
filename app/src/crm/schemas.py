@@ -458,3 +458,5 @@ class EditingLockResponse(BaseModel):
     user: UserEmail
     section_name: str
     animal_id: SixDigitID
+
+    model_config = ConfigDict(from_attributes=True)
