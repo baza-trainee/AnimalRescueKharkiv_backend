@@ -40,12 +40,14 @@ class ReturnMessages:
 
     access_denied: str = "Access denied. Required permissions: %s"
 
+    illegal_sort: str = "Sort expression should be in format {field}|{direction}"
+
     crm_animal_type_not_found: str = "Animal type not found"
     crm_animal_not_found: str = "Animal not found"
     crm_location_not_found: str = "Location not found"
-    illegal_sort: str = "Sort expression should be in format {field}|{direction}"
     crm_lock_not_found: str = "Section '%s' is not locked by user '%s'"
     crm_acquire_lock_failed: str = "Failed to acquire lock on '%s' section for '%s' user"
+    crm_invalid_date_format: str = "Invalid date format. Expected string in DD/MM/YYYY or YYYY-MM-DD format."
 
     date_not_past_present: str = "Date must be in the past or today"
 

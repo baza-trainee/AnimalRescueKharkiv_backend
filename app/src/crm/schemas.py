@@ -35,20 +35,30 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 
 def validate_past_or_present(value: date | str) -> date | str:
     """Validates value for past or present date"""
-    dt_val: date = None
-    if isinstance(value, str):
-        try:
-            dt_val = parser.parse(value).date()
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Invalid date format. Use a recognizable date format like YYYY-MM-DD or DD/MM/YYYY.",
-            )
-    if not dt_val:
+    if isinstance(value, date):
         return value
-    if dt_val > datetime.now().date():
+    if not isinstance(value, str):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=RETURN_MSG.crm_invalid_date_format,
+        )
+
+    parsed_date = None
+    for fmt in ("%d/%m/%Y", "%Y/%m/%d", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            parsed_date = datetime.strptime(value, fmt).date() #noqa: DTZ007
+            break
+        except ValueError:
+            continue
+
+    if not parsed_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=RETURN_MSG.crm_invalid_date_format,
+        )
+    if parsed_date > datetime.now().date():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
-    return dt_val
+    return parsed_date
 
 
 PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present), Field(
