@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from src.authorization.service import authorization_service
+from src.base_schemas import Sorting
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.crm.models import Animal, AnimalType, Gender, Location
@@ -28,7 +29,6 @@ from src.crm.schemas import (
     LocationResponse,
     NamedSection,
     PastOrPresentDate,
-    Sorting,
 )
 from src.crm.strategies import update_handler
 from src.exceptions.exceptions import RETURN_MSG

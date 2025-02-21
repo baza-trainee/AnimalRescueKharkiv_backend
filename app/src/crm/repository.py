@@ -12,6 +12,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from sqlalchemy.sql.elements import UnaryExpression
+from src.base_schemas import SORTING_VALIDATION_REGEX
 from src.configuration.settings import settings
 from src.crm.models import (
     Animal,
@@ -25,7 +26,6 @@ from src.crm.models import (
     Vaccination,
 )
 from src.crm.schemas import (
-    SORTING_VALIDATION_REGEX,
     AnimalCreate,
     AnimalLocationBase,
     AnimalLocationUpdate,
