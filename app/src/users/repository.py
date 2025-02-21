@@ -70,7 +70,7 @@ class UsersRepository(metaclass=SingletonMeta):
 
     def __get_order_expression(self, sort: str) -> UnaryExpression[_T]:
         if not re.match(SORTING_VALIDATION_REGEX, sort):
-            raise ValueError(RETURN_MSG.crm_illegal_sort)
+            raise ValueError(RETURN_MSG.illegal_sort)
         field, direction = sort.split("|", 1)
         match direction.lower():
             case "asc":

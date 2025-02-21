@@ -32,5 +32,5 @@ class Sorting(BaseModel):
     def validate_regex(cls, value: str) -> str:
         """Validates sorting option value via regular expression"""
         if not re.match(SORTING_VALIDATION_REGEX, value):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.crm_illegal_sort)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.illegal_sort)
         return value
