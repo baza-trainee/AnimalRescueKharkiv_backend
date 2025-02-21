@@ -382,7 +382,8 @@ async def update_animal_section(animal_id: int,
                                                                 db=db)
         exprire_delta: timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
         if (not editing_lock
-            or editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone()):
+            or (editing_lock.user.id != current_user.id
+                and editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone())):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail=RETURN_MSG.crm_lock_not_found % (section_name, current_user.email))
         if editing_lock.user.id != current_user.id:
