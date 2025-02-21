@@ -134,7 +134,7 @@ async def search_users(
 ) -> List[UserResponse]:
     """Retrieves all users with optional filtering. Returns a list of users"""
     terms = __get_terms_from_query(query=query)
-    cache_key = users_router_cache.get_all_records_cache_key_with_params(domain, *terms)
+    cache_key = users_router_cache.get_all_records_cache_key_with_params(domain, roles, sorting.sort, *terms)
     users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
         users = await users_repository.search_users(*terms, domain=domain, roles=roles, sort=sorting.sort, db=db)
