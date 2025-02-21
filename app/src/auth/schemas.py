@@ -1,6 +1,7 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
+from src.users.schemas import ExtEmailStr, PwdStr
 
 
 class TokenBase(BaseModel):
@@ -9,7 +10,7 @@ class TokenBase(BaseModel):
 
 
 class EmailBase(BaseModel):
-    email: EmailStr
+    email: ExtEmailStr
 
 
 class EmailInvite(EmailBase):
@@ -19,18 +20,9 @@ class EmailInvite(EmailBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EmailRegistr(EmailBase):
-    username: str
-
-
-class UserInvite(BaseModel):
-    email: EmailStr
-    role: str
-
-
 class UserRegister(BaseModel):
-    email: EmailStr
-    password: str
+    email: ExtEmailStr
+    password: PwdStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
