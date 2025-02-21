@@ -44,7 +44,7 @@ def validate_past_or_present(value: date | str) -> date | str:
         )
 
     parsed_date = None
-    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+    for fmt in ("%d/%m/%Y", "%Y/%m/%d", "%Y-%m-%d", "%d-%m-%Y"):
         try:
             parsed_date = datetime.strptime(value, fmt).date() #noqa: DTZ007
             break
