@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import HTTPException, status
@@ -78,6 +79,7 @@ class UserResponse(UserBase, UserExt, ResponseReferenceBase):
     phone: Optional[str] = None
     photo: Optional[MediaAssetResponse] = None
     model_config = ConfigDict(from_attributes=True)
+    created_at: datetime
 
 
 class UserUpdate(UserExt):
