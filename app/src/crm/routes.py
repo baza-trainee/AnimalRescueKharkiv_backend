@@ -30,6 +30,7 @@ from src.crm.schemas import (
     NamedSection,
     PastOrPresentDate,
 )
+from src.crm.stats.routes import stats_router_cache
 from src.crm.strategies import update_handler
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
@@ -330,6 +331,7 @@ async def create_animal(model: AnimalCreate,
         logger.exception("An error occured:\n")
         raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     await animals_router_cache.invalidate_all_keys()
+    await stats_router_cache.invalidate_all_keys()
     animal = AnimalResponse.model_validate(animal)
     animal.authorize_model_attributes(role=current_user.role)
     return animal
@@ -353,6 +355,7 @@ async def delete_animal(animal_id: int,
         await animals_repository.delete_animal(animal=animal, db=db)
         await animals_router_cache.invalidate_key(key=cache_key)
         await animals_router_cache.invalidate_all_keys()
+        await stats_router_cache.invalidate_all_keys()
     except HTTPException:
         raise
     except Exception as err:
@@ -403,6 +406,7 @@ async def update_animal_section(animal_id: int,
                 cache_key = animals_router_cache.get_cache_key(str(animal_id))
                 await animals_router_cache.invalidate_key(key=cache_key)
                 await animals_router_cache.invalidate_all_keys()
+                await stats_router_cache.invalidate_all_keys()
         animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
     except HTTPException:
         raise
