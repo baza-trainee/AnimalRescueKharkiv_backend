@@ -22,7 +22,7 @@ class Authorization(metaclass=SingletonMeta):
             current_security_token: SecurityToken = Depends(auth_service.get_access_token),
             ) -> User:
         """Authorizes user access. Returns the authorized user"""
-        return await self.__do_authorize_user(scopes=scopes,
+        return await self.__do_authorize_user(scopes=scopes.scopes,
                                         current_security_token=current_security_token)
 
     async def authorize_user_for_section(
@@ -32,12 +32,10 @@ class Authorization(metaclass=SingletonMeta):
             ) -> User:
         """Authorizes user access for specific named data section. Returns the authorized user"""
         section_scope = f"{section_name}:write"
-        scopes.scopes.append(section_scope)
-        try:
-            return  await self.__do_authorize_user(scopes=scopes,
+        new_scopes = list(scopes.scopes)
+        new_scopes.append(section_scope)
+        return  await self.__do_authorize_user(scopes=new_scopes,
                                         current_security_token=current_security_token)
-        finally:
-            scopes.scopes.remove(section_scope)
 
 
     async def authorize_user_or_self(
@@ -50,15 +48,15 @@ class Authorization(metaclass=SingletonMeta):
         user: User = current_security_token.user
         if domain == user.domain and email == user.email:
             return user
-        return await self.__do_authorize_user(scopes=scopes,
+        return await self.__do_authorize_user(scopes=scopes.scopes,
                                         current_security_token=current_security_token)
 
-    async def __do_authorize_user(self, scopes: SecurityScopes, current_security_token: SecurityToken) -> User:
+    async def __do_authorize_user(self, scopes: List[str], current_security_token: SecurityToken) -> User:
         permissions: List[str] = auth_service.get_permissions_from_token(current_security_token.token)
-        required_permissions: set = set(scopes.scopes)
+        required_permissions: set = set(scopes)
         user: User = current_security_token.user
         logger.info(current_security_token.token)
-        logger.info(scopes.scopes)
+        logger.info(scopes)
 
         if not required_permissions or required_permissions.issubset(permissions) or self.__is_system_admin(user):
             return user
