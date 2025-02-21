@@ -6,10 +6,11 @@ import uvicorn
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Security, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_limiter.depends import RateLimiter
-from pydantic import ValidationError
+from pydantic import UUID4, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.authorization.service import authorization_service
+from src.base_schemas import Sorting
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
@@ -126,6 +127,8 @@ def __get_terms_from_query(query: str) -> set[str]:
 async def search_users(
     domain: str,
     query: str = Query(default=None),
+    roles: List[UUID4] = Query(default=None),
+    sorting: Sorting = Depends(),
     db: AsyncSession = Depends(get_db),
     _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
 ) -> List[UserResponse]:
@@ -134,7 +137,7 @@ async def search_users(
     cache_key = users_router_cache.get_all_records_cache_key_with_params(domain, *terms)
     users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
-        users = await users_repository.search_users(*terms, domain=domain, db=db)
+        users = await users_repository.search_users(*terms, domain=domain, roles=roles, sort=sorting.sort, db=db)
         users = [UserResponse.model_validate(user) for user in users]
         if users:
             await users_router_cache.set(key=cache_key, value=users)

@@ -1,11 +1,16 @@
 import logging
-from typing import TYPE_CHECKING, List
+import re
+from typing import TYPE_CHECKING, List, TypeVar
 
 import uvicorn
+from pydantic import UUID4
 from sqlalchemy import Select, and_, any_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
+from sqlalchemy.sql.elements import UnaryExpression
+from src.base_schemas import SORTING_VALIDATION_REGEX
+from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
 from src.roles.models import Role
 from src.singleton import SingletonMeta
@@ -14,6 +19,7 @@ from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserPasswor
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
+_T = TypeVar("_T")
 
 class UsersRepository(metaclass=SingletonMeta):
     async def create_user(self, model: UserCreate, db: AsyncSession) -> User:
@@ -62,14 +68,35 @@ class UsersRepository(metaclass=SingletonMeta):
         expression.append(User.role.has(Role.title.ilike(any_(prefixes))))
         return or_(*expression)
 
-    async def search_users(self, *terms, domain:str, db: AsyncSession) -> list[User]:
+    def __get_order_expression(self, sort: str) -> UnaryExpression[_T]:
+        if not re.match(SORTING_VALIDATION_REGEX, sort):
+            raise ValueError(RETURN_MSG.crm_illegal_sort)
+        field, direction = sort.split("|", 1)
+        match direction.lower():
+            case "asc":
+                return asc(getattr(User, field))
+            case "desc":
+                return desc(getattr(User, field))
+        return desc(User.created_at)
+
+    async def search_users(self,
+                           *terms,
+                           domain:str,
+                           roles:List[UUID4],
+                           sort: str | None = "created_at|desc",
+                           db: AsyncSession,
+                          ) -> list[User]:
         """Searches all users by terms. Returns the retrieved user collection"""
         statement = select(User)
         if domain:
             statement = statement.filter_by(domain=domain.lower())
+        if roles:
+            statement = statement.filter(User.role_id.in_(roles))
         condition: ColumnElement[bool] | None = self.__get_search_conditions(*terms)
         if condition is not None:
             statement = statement.filter(condition)
+        if sort:
+            statement = statement.order_by(self.__get_order_expression(sort=sort))
         result = await db.execute(statement)
         users = result.unique().scalars().all()
         return list(users)
