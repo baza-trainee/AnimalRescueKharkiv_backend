@@ -35,7 +35,9 @@ async def read_adotpion_countries_stats(
     db: AsyncSession = Depends(get_db),
     ) -> LabeledStats:
     """Retrieves contries stats"""
-    cache_key = stats_router_cache.get_cache_key(key=f"countries_{query.from_date}_{query.to_date}")
+    cache_key = stats_router_cache.get_all_records_cache_key_with_params("countries",
+                                                                         query.from_date,
+                                                                         query.to_date)
     response: LabeledStats = await stats_router_cache.get(key=cache_key)
     if response:
         return response
@@ -62,7 +64,7 @@ async def read_departments_stats(
      db: AsyncSession = Depends(get_db),
     ) -> LabeledStats:
     """Retrieves departments stats"""
-    cache_key = stats_router_cache.get_cache_key(key="departments")
+    cache_key = stats_router_cache.get_all_records_cache_key_with_params("departments")
     response: LabeledStats = await stats_router_cache.get(key=cache_key)
     if response:
         return response
@@ -87,7 +89,9 @@ async def read_animal_stats(
     db: AsyncSession = Depends(get_db),
     ) -> AnimalStatusStats:
     """Retrieves animal stats"""
-    cache_key = stats_router_cache.get_cache_key(key=f"animals_{query.from_date}_{query.to_date}")
+    cache_key = stats_router_cache.get_all_records_cache_key_with_params("animals",
+                                                                         query.from_date,
+                                                                         query.to_date)
     response: AnimalStatusStats = await stats_router_cache.get(key=cache_key)
     if response:
         return response
