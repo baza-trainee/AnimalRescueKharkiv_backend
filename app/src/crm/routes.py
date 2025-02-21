@@ -372,7 +372,7 @@ async def update_animal_section(animal_id: int,
                                 body: dict = Body(),
                                 db: AsyncSession = Depends(get_db),
                                 current_user: User = Security(authorization_service.authorize_user_for_section,
-                                                              scopes=["crm:read"]),
+                                                              scopes=["crm:read"], use_cache=False),
                                 ) -> AnimalResponse:
     """Updates animal object baased on JSON body. Returns updated animal"""
     animal: Animal = None
@@ -427,7 +427,7 @@ async def acquire_lock(animal_id: int,
                               section_name: str,
                               db: AsyncSession = Depends(get_db),
                               current_user: User = Security(authorization_service.authorize_user_for_section,
-                                                              scopes=["crm:read"]),
+                                                              scopes=["crm:read"], use_cache=False),
                              ) -> EditingLockResponse:
     """Acquires lock on section for context user. Returns the acquired lock"""
     try:
@@ -463,7 +463,7 @@ async def release_lock(animal_id: int,
                         section_name: str,
                         db: AsyncSession = Depends(get_db),
                         current_user: User = Security(authorization_service.authorize_user_for_section,
-                                                        scopes=["crm:read"]),
+                                                        scopes=["crm:read"], use_cache=False),
                     ) -> None:
     """Deletes the animal by ID"""
     try:
