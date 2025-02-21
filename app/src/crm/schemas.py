@@ -55,7 +55,6 @@ PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_presen
         example="YYYY-MM-DD or DD/MM/YYYY",
         json_schema_extra={"type": "date", "format": "<= datetime.now().date()"},
     )]
-SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class DynamicSection(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -443,18 +442,6 @@ class AnimalState(enum.Enum):
     active: str = "active"
     dead: str = "dead"
     adopted: str = "adopted"
-
-class Sorting(BaseModel):
-    sort: str | None = Query(default="created_at|desc",
-                                description="Sort option in format of {field}|{direction}. Default: created_at|desc")
-
-    @field_validator("sort")
-    @classmethod
-    def validate_regex(cls, value: str) -> str:
-        """Validates sorting option value via regular expression"""
-        if not re.match(SORTING_VALIDATION_REGEX, value):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.crm_illegal_sort)
-        return value
 
 
 class EditingLockResponse(BaseModel):
