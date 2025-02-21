@@ -49,7 +49,10 @@ def validate_past_or_present(value: date | str) -> date | str:
     return dt_val
 
 
-PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present)]
+PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present), Field(
+        example="YYYY-MM-DD or DD/MM/YYYY",
+        json_schema_extra={"type": "date", "format": "<= datetime.now().date()"},
+    )]
 SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class DynamicSection(BaseModel):
