@@ -11,10 +11,10 @@ from dateutil import parser  # type: ignore[import-untyped]
 from fastapi import HTTPException, Query, status
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PlainSerializer,
-    PlainValidator,
     computed_field,
     field_validator,
     model_serializer,
@@ -38,10 +38,7 @@ def validate_past_or_present(value: date | str) -> date | str:
     if isinstance(value, date):
         return value
     if not isinstance(value, str):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=RETURN_MSG.crm_invalid_date_format,
-        )
+        ValueError(RETURN_MSG.crm_invalid_date_format)
 
     parsed_date = None
     for fmt in ("%d/%m/%Y", "%Y/%m/%d", "%Y-%m-%d", "%d-%m-%Y"):
@@ -52,16 +49,13 @@ def validate_past_or_present(value: date | str) -> date | str:
             continue
 
     if not parsed_date:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=RETURN_MSG.crm_invalid_date_format,
-        )
+        raise ValueError(RETURN_MSG.crm_invalid_date_format)
     if parsed_date > datetime.now().date():
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=RETURN_MSG.date_not_past_present)
+        raise ValueError(RETURN_MSG.date_not_past_present)
     return parsed_date
 
 
-PastOrPresentDate = Annotated[date | str, PlainValidator(validate_past_or_present), Field(
+PastOrPresentDate = Annotated[date | str, BeforeValidator(validate_past_or_present), Field(
         example="YYYY-MM-DD or DD/MM/YYYY",
         json_schema_extra={"type": "date", "format": "<= datetime.now().date()"},
     )]
