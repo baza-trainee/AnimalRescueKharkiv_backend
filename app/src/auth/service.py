@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 import uvicorn
 from fastapi import Depends, Header, HTTPException, Request, Security, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.managers import token_manager
@@ -177,6 +177,8 @@ class Auth(metaclass=SingletonMeta):
                     return token_record
                 if payload["scope"] != token_type.name:
                     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.token_scope_invalid)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.token_invalid)
+        except ExpiredSignatureError:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.token_invalid)
         except JWTError as e:
             logger.error(e)
