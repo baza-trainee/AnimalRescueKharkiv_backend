@@ -206,7 +206,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         return result.unique().scalar_one_or_none()
 
     def __get_name_id_condition(self, query: str) -> ColumnElement[bool] | None:
-        terms = re.split(r"[;,|\s]+", query)
+        terms = re.split(r"[;,|\s]+", query.strip())
         ids: List[int] = []
         names: List[str] = []
         for term in terms:
