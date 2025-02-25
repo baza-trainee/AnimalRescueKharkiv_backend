@@ -1,6 +1,8 @@
 import logging
+from typing import List
 
 import uvicorn
+from sqlalchemy import ColumnExpressionArgument, Select, and_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.configuration.settings import settings
@@ -29,13 +31,13 @@ class PermissionsRepository (metaclass=SingletonMeta):
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
 
-    async def read_permissions(self,
+    async def search_permissions(self,
                                entity:str,
                                operation:str,
                                db: AsyncSession,
                                *, has_title: bool = True,
                               ) -> list[Permission]:
-        """Reads all permissions with optional filtering. Returns the retrieved collection of permissions"""
+        """Searches all permissions with optional filtering. Returns the retrieved collection of permissions"""
         statement = select(Permission)
         if entity:
             statement = statement.filter_by(entity=entity.lower())
@@ -43,6 +45,22 @@ class PermissionsRepository (metaclass=SingletonMeta):
             statement = statement.filter_by(operation=operation.lower())
         if has_title:
             statement = statement.filter(Permission.title != None) #noqa: E711
+        result = await db.execute(statement)
+        permissions = result.unique().scalars().all()
+        return list(permissions)
+
+    async def read_permissions(self,
+                               models: List[PermissionBase],
+                               db: AsyncSession,
+                              ) -> list[Permission]:
+        """Reads all permissions base on models. Returns the retrieved collection of permissions"""
+        statement = select(Permission)
+        expression: List[ColumnExpressionArgument[bool]] = []
+        if models:
+            expression = [and_(Permission.entity == model.entity, Permission.operation == model.operation)
+                          for model in models]
+        if expression:
+            statement = statement.filter(or_(*expression))
         result = await db.execute(statement)
         permissions = result.unique().scalars().all()
         return list(permissions)
