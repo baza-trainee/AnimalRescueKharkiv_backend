@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Tuple, TypeVar
 from uuid import UUID
 
 import uvicorn
-from sqlalchemy import Select, and_, asc, desc, func, or_
+from sqlalchemy import Select, and_, any_, asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import DeclarativeBase
@@ -213,13 +213,13 @@ class AnimalsRepository(metaclass=SingletonMeta):
             if term.isdigit():
                 ids.append(int(term))
             else:
-                names.append(term.lower())
+                names.append(term.lower() + "%")
 
         expression: List[ColumnExpressionArgument[bool]] = []
         if ids:
             expression.append(Animal.id.in_(ids))
         if names:
-            expression.append(func.lower(Animal.name).in_(names))
+            expression.append(func.lower(Animal.name).ilike(any_(names)))
         return or_(*expression)
 
     def __get_order_expression(self, sort: str) -> UnaryExpression[_T]:
