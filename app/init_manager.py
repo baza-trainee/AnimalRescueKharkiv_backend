@@ -72,8 +72,8 @@ class DataInitializer(AutoInitializer):
                     existing = await roles_repository.create_role(role_obj, self.db)
                 role_update = RoleUpdate(**role_model)
                 if role_update and role_update.assign:
-                    for permission_model in role_update.assign:
-                        permission = await permissions_repository.read_permission(permission_model, self.db)
+                    permissions = await permissions_repository.read_permissions(role_update.assign, self.db)
+                    for permission in permissions:
                         if permission and (not existing.permissions or
                                            all(p.id != permission.id for p in existing.permissions)):
                             existing = await roles_repository.assign_permission(existing, permission, self.db)
