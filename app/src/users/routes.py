@@ -124,7 +124,7 @@ async def read_domain_users(
 
 def __get_terms_from_query(query: str) -> set[str]:
     if query:
-        terms = re.split(r"[;,|\s]+", query)
+        terms = re.split(r"[;,|\s]+", query.strip())
         return set(terms)
     return set()
 
