@@ -408,6 +408,19 @@ async def update_animal_section(animal_id: int,
                 await animals_router_cache.invalidate_all_keys()
                 await stats_router_cache.invalidate_all_keys()
         animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
+    except ValidationError as e:
+        errors = [
+            {
+                **error,
+                "ctx": {"error": str(error["ctx"]["error"])}
+                    if "ctx" in error and "error" in error["ctx"] else error.get("ctx"),
+            }
+            for error in e.errors()
+        ]
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=errors,
+        )
     except HTTPException:
         raise
     except Exception as err:
