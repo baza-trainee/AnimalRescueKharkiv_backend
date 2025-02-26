@@ -1,12 +1,8 @@
 name: Stop Render Web Service
 
 on:
-  push:
-    branches:
-      - release/dev
-      - release/uat
   schedule:
-    - cron: "59 20 * * *" # Every day at 8:59 PM UTC (which corresponds to 11:59 PM Kyiv time)
+    - cron: "59 21 * * *" # Every day at 8:59 PM UTC (which corresponds to 11:59 PM Kyiv time)
 
 jobs:
   stop_service:
@@ -14,9 +10,9 @@ jobs:
     steps:
       - name: Stop DEV Service
         run: |
-          curl -X POST "https://api.render.com/v1/services/cupbchpopnds7392j3mg/stop" \
+          curl -X POST "https://api.render.com/v1/services/cupbchpopnds7392j3mg/suspend" \
           -H "Authorization: Bearer rnd_8rqkfGCoMqcsZBEFSCIO1zVGIGR6"
       - name: Stop UAT Service
         run: |
-          curl -X POST "https://api.render.com/v1/services/cupdlvpopnds73938vjg/stop" \
+          curl -X POST "https://api.render.com/v1/services/cupdlvpopnds73938vjg/suspend" \
           -H "Authorization: Bearer rnd_URkLeA0rZaaK3hASQpb6Sf7n51dC"
