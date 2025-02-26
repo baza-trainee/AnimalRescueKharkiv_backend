@@ -65,7 +65,7 @@ async def read_domain_roles(domain: str,
                            _current_user: User = Security(authorization_service.authorize_user,
                                                        scopes=["security:administer"]),
                            db: AsyncSession = Depends(get_db)) -> List[RoleResponse]:
-    """Retrieves all roles with optional filtering. Returns list of role objects"""
+    """Retrieves all domain roles with optional filtering. Returns list of role objects"""
     cache_key = roles_router_cache.get_all_records_cache_key_with_params(
         name,
         domain,
