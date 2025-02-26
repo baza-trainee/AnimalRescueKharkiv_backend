@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Dict, List
 
 import uvicorn
 from fastapi import APIRouter, Depends, HTTPException, Query, Security, status
@@ -12,6 +12,7 @@ from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
+from src.permissions.models import Permission
 from src.permissions.repository import permissions_repository
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase, RoleResponse, RoleUpdate
@@ -19,6 +20,7 @@ from src.services.cache import Cache
 from src.users.models import User
 
 if TYPE_CHECKING:
+    from src.permissions.schemas import PermissionBase
     from src.roles.models import Role
 
 logger = logging.getLogger(uvicorn.logging.__name__)
@@ -103,6 +105,31 @@ async def delete_roles(models: List[RoleBase],
         await roles_repository.delete_role(role=role_to_delete, db=db)
     await roles_router_cache.invalidate_all_keys()
 
+
+async def __validate_permissions(model: RoleUpdate, db: AsyncSession) -> Dict[str, List[Permission]]:
+    invalid_permissions: Dict[str, List[PermissionBase]] = {}
+    valid_permissions: Dict[str, List[Permission]] = {}
+    if model.assign:
+        assign: List[Permission] = await permissions_repository.read_permissions(models=model.assign, db=db)
+        valid_permissions ["assign"] = assign
+        invalid_permissions["assign"] = list(filter(lambda pm:
+                       not list(filter(lambda p: p.entity == pm.entity and p.operation == pm.operation, assign))
+                       , model.assign))
+    if model.unassign:
+        unassign: List[Permission] = await permissions_repository.read_permissions(models=model.unassign, db=db)
+        valid_permissions ["unassign"] = unassign
+        invalid_permissions["unassign"] = list(filter(lambda pm:
+                       not list(filter(lambda p: p.entity == pm.entity and p.operation == pm.operation, unassign))
+                       , model.unassign))
+
+    if any(invalid_permissions.get(key) for key in ("assign", "unassign")):
+        response: dict = {
+            "Invalid permissions": invalid_permissions,
+        }
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=jsonable_encoder(response))
+    return valid_permissions
+
+
 @router.patch("/{domain}/{role_name}", response_model=RoleResponse, status_code=status.HTTP_200_OK,
             description=settings.rate_limiter_description,
             dependencies=[Depends(RateLimiter(times=settings.rate_limiter_times,
@@ -125,15 +152,15 @@ async def update_role(domain: str, role_name: str, body: RoleUpdate,
         if body.title:
             role = await roles_repository.update_title(role=role, title=body.title, db=db)
 
-        if body.assign:
-            for permission_model in body.assign:
-                permission = await permissions_repository.read_permission(model=permission_model, db=db)
+        permissions: Dict[str, List[Permission]] = await __validate_permissions(model=body, db=db)
+
+        if "assign" in permissions:
+            for permission in permissions["assign"]:
                 if permission:
                     role = await roles_repository.assign_permission(role=role, permission=permission, db=db)
 
-        if body.unassign:
-            for permission_model in body.unassign:
-                permission = await permissions_repository.read_permission(model=permission_model, db=db)
+        if "unassign" in permissions:
+            for permission in permissions["unassign"]:
                 if permission:
                     role = await roles_repository.unassign_permission(role=role, permission=permission, db=db)
 
