@@ -6,15 +6,15 @@ from pydantic import (
     ConfigDict,
     PlainSerializer,
 )
-from src.base_schemas import ResponseReferenceBase
+from src.base_schemas import ResponseReferenceBase, SanitizedString
 from src.configuration.settings import settings
 from src.permissions.schemas import PermissionBase, PermissionResponse
 
 
 class RoleBase(BaseModel):
-    name: str
-    domain: str
-    title: Optional[str] = None
+    name: SanitizedString
+    domain: SanitizedString
+    title: Optional[SanitizedString] = None
 
 
 class RoleResponse(RoleBase, ResponseReferenceBase):
@@ -24,6 +24,6 @@ class RoleResponse(RoleBase, ResponseReferenceBase):
 
 
 class RoleUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[SanitizedString] = None
     assign: Optional[List[PermissionBase]] = None
     unassign: Optional[List[PermissionBase]] = None
