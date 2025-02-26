@@ -27,6 +27,7 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.roles_prefix, tags=["roles"])
 roles_router_cache: Cache = Cache(owner=router, all_prefix="roles", ttl=settings.default_cache_ttl)
 
+
 @router.get("/",  response_model=List[RoleResponse],
              description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
                  times=settings.rate_limiter_get_times,
@@ -34,9 +35,37 @@ roles_router_cache: Cache = Cache(owner=router, all_prefix="roles", ttl=settings
 async def read_roles(name: str = Query(default=None),
                            domain: str = Query(default=None),
                            _current_user: User = Security(authorization_service.authorize_user,
-                                                       scopes=["security:administer"]),
+                                                       scopes=["system:admin"]),
                            db: AsyncSession = Depends(get_db)) -> List[RoleResponse]:
     """Retrieves all roles with optional filtering. Returns list of role objects"""
+    cache_key = roles_router_cache.get_all_records_cache_key_with_params(
+        name,
+        domain,
+    )
+    roles: List[RoleResponse] = await roles_router_cache.get(key=cache_key)
+    if not roles:
+        roles = await roles_repository.read_roles(
+                                                            name=name,
+                                                            domain=domain,
+                                                            db=db)
+        roles = [RoleResponse.model_validate(role) for role in roles]
+        if roles:
+            await roles_router_cache.set(key=cache_key, value=roles)
+    if not roles:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
+    return roles
+
+
+@router.get("/{domain}",  response_model=List[RoleResponse],
+             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
+                 times=settings.rate_limiter_get_times,
+                 seconds=settings.rate_limiter_seconds))])
+async def read_domain_roles(domain: str,
+                           name: str = Query(default=None),
+                           _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["security:administer"]),
+                           db: AsyncSession = Depends(get_db)) -> List[RoleResponse]:
+    """Retrieves all domain roles with optional filtering. Returns list of role objects"""
     cache_key = roles_router_cache.get_all_records_cache_key_with_params(
         name,
         domain,
