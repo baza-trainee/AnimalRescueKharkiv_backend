@@ -238,7 +238,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
                        parameter: object | None,
                        expression: Callable[[Any], ColumnElement[bool]]) -> Select[Tuple[DeclarativeBase]]:
         if parameter is not None:
-            statement = statement.filter(expression(parameter))
+            statement = statement.filter(expression(parameter.strip() if isinstance(parameter, str) else parameter))
         return statement
 
     async def read_animals(self,

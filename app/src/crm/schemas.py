@@ -20,7 +20,7 @@ from pydantic import (
     model_serializer,
 )
 from sqlalchemy.orm.decl_api import DeclarativeMeta
-from src.base_schemas import IntReferenceBase, ResponseReferenceBase, UUIDReferenceBase
+from src.base_schemas import IntReferenceBase, ResponseReferenceBase, SanitizedString, UUIDReferenceBase
 from src.configuration.settings import settings
 from src.crm.models import Gender
 from src.exceptions.exceptions import RETURN_MSG
@@ -188,11 +188,11 @@ class DynamicResponse(BaseModel):
 
 
 class LocationBase(BaseModel):
-    name: str
+    name: SanitizedString
 
 
 class AnimalTypeBase(BaseModel):
-    name: str
+    name: SanitizedString
 
 
 class AnimalLocationBase(BaseModel):
@@ -203,21 +203,21 @@ class AnimalLocationBase(BaseModel):
 
 class VaccinationBase(BaseModel):
     is_vaccinated: bool
-    vaccine_type: Optional[str] = Field(default=None, max_length=100)
+    vaccine_type: Optional[SanitizedString] = Field(default=None, max_length=100)
     date: Optional[PastOrPresentDate] = None
-    comment: Optional[str] = Field(default=None, max_length=500)
+    comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class DiagnosisBase(BaseModel):
-    name: Optional[str] = Field(default=None, max_length=200)
+    name: Optional[SanitizedString] = Field(default=None, max_length=200)
     date: Optional[PastOrPresentDate] = None
-    comment: Optional[str] = Field(default=None, max_length=500)
+    comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class ProcedureBase(BaseModel):
-    name: Optional[str] = Field(default=None, max_length=200)
+    name: Optional[SanitizedString] = Field(default=None, max_length=200)
     date: Optional[PastOrPresentDate] = None
-    comment: Optional[str] = Field(default=None, max_length=500)
+    comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class AnimalTypeResponse(AnimalTypeBase, IntReferenceBase):
@@ -322,14 +322,14 @@ class NamedSection:
 
 class AnimalNameUpdate(BaseModel, NamedSection):
     _section_name = "name"
-    name: str = Field(min_length=2, max_length=30, pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")
+    name: SanitizedString = Field(min_length=2, max_length=30, pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")
 
 
 class OriginUpdate(BaseModel, NamedSection):
     _section_name = "origin"
     origin__arrival_date: PastOrPresentDate
-    origin__city: str = Field(max_length=100)
-    origin__address: Optional[str] = Field(default=None, max_length=100)
+    origin__city: SanitizedString = Field(max_length=100)
+    origin__address: Optional[SanitizedString] = Field(default=None, max_length=100)
 
 
 class GeneralUpdate(BaseModel, NamedSection):
@@ -338,46 +338,46 @@ class GeneralUpdate(BaseModel, NamedSection):
     general__gender: Gender = Gender.male
     general__weight: Optional[float] = Field(default=None, ge=0.0)
     general__age: Optional[float] = Field(default=None, le=100.0)
-    general__specials: Optional[str] = Field(default=None, max_length=200)
+    general__specials: Optional[SanitizedString] = Field(default=None, max_length=200)
 
 
 class OwnerUpdate(BaseModel, NamedSection):
     _section_name = "owner"
-    owner__info: Optional[str] = Field(default=None, max_length=500)
+    owner__info: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class CommentUpdate(BaseModel, NamedSection):
     _section_name = "comment"
-    comment__text: Optional[str] = Field(default=None, max_length=1000)
+    comment__text: Optional[SanitizedString] = Field(default=None, max_length=1000)
 
 
 class AdoptionUpdate(BaseModel, NamedSection):
     _section_name = "adoption"
-    adoption__country: Optional[str] = Field(default=None, max_length=50)
-    adoption__city: Optional[str] = Field(default=None, max_length=50)
+    adoption__country: Optional[SanitizedString] = Field(default=None, max_length=50)
+    adoption__city: Optional[SanitizedString] = Field(default=None, max_length=50)
     adoption__date: Optional[PastOrPresentDate] = None
-    adoption__comment: Optional[str] = Field(default=None, max_length=500)
+    adoption__comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class DeathUpdate(BaseModel, NamedSection):
     _section_name = "death"
     death__dead: Optional[bool] = False
     death__date: Optional[PastOrPresentDate] = None
-    death__comment: Optional[str] = Field(default=None, max_length=500)
+    death__comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class SterilizationUpdate(BaseModel, NamedSection):
     _section_name = "sterilization"
     sterilization__done: Optional[bool] = None
     sterilization__date: Optional[PastOrPresentDate] = None
-    sterilization__comment: Optional[str] = Field(default=None, max_length=500)
+    sterilization__comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class MicrochippingUpdate(BaseModel, NamedSection):
     _section_name = "microchipping"
     microchipping__done: Optional[bool] = None
     microchipping__date: Optional[PastOrPresentDate] = None
-    microchipping__comment: Optional[str] = Field(default=None, max_length=500)
+    microchipping__comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class MediaUpdate(BaseModel, NamedSection):

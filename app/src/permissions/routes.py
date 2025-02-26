@@ -42,7 +42,7 @@ async def read_permissions(entity: str = Query(default=None),
     )
     permissions: List[PermissionResponse] = await permissions_router_cache.get(key=cache_key)
     if not permissions:
-        permissions = await permissions_repository.read_permissions(entity=entity,
+        permissions = await permissions_repository.search_permissions(entity=entity,
                                                                     operation=operation,
                                                                     has_title=has_title,
                                                                     db=db)
