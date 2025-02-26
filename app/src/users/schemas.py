@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 
 from fastapi import HTTPException, status
 from pydantic import UUID4, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, field_validator
-from src.base_schemas import ResponseReferenceBase
+from src.base_schemas import ResponseReferenceBase, SanitizedString
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.schemas import MediaAssetResponse, UUIDReferenceBase
@@ -51,15 +51,15 @@ ExtEmailStr = Annotated[EmailStr, BeforeValidator(validate_email),Field(
 
 class UserBase(BaseModel):
     email: ExtEmailStr
-    domain: str
+    domain: SanitizedString
 
 
 class UserExt(BaseModel):
-    first_name: Optional[str] = Field(default=None,
+    first_name: Optional[SanitizedString] = Field(default=None,
                                       min_length=2,
                                       max_length=30,
                                       pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")
-    last_name: Optional[str] = Field(default=None,
+    last_name: Optional[SanitizedString] = Field(default=None,
                                      min_length=2,
                                      max_length=50,
                                      pattern=r"^[a-zA-Zа-яА-ЯґҐєЄіІїЇ'’\-\s]+$")

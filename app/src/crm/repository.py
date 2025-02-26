@@ -238,7 +238,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
                        parameter: object | None,
                        expression: Callable[[Any], ColumnElement[bool]]) -> Select[Tuple[DeclarativeBase]]:
         if parameter is not None:
-            statement = statement.filter(expression(parameter))
+            statement = statement.filter(expression(parameter.strip() if isinstance(parameter, str) else parameter))
         return statement
 
     async def read_animals(self,
@@ -310,6 +310,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         """Reads all animal types. Returns the retrieved animal types"""
         statement = select(AnimalType)
         result = await db.execute(statement)
+        statement = statement.order_by(asc(AnimalType.id))
         return result.unique().scalars().all()
 
     async def read_location(self, location_id: int, db: AsyncSession) -> Location | None:
@@ -323,6 +324,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         """Reads all locations. Returns the retrieved locations"""
         statement = select(Location)
         result = await db.execute(statement)
+        statement = statement.order_by(asc(Location.id))
         return result.unique().scalars().all()
 
     async def delete_animal(self, animal:Animal, db: AsyncSession) -> Animal:

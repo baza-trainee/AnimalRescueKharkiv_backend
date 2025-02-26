@@ -6,18 +6,18 @@ from pydantic import (
     ConfigDict,
     PlainSerializer,
 )
-from src.base_schemas import ResponseReferenceBase
+from src.base_schemas import ResponseReferenceBase, SanitizedString
 from src.configuration.settings import settings
 
 
 class PermissionBase(BaseModel):
-    entity: str
-    operation: str
-    title: Optional[str] = None
+    entity: SanitizedString
+    operation: SanitizedString
+    title: Optional[SanitizedString] = None
 
 
 class PermissionResponse(PermissionBase, ResponseReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
 class PermissionUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[SanitizedString] = None
