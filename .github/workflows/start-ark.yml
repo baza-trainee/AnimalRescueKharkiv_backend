@@ -14,9 +14,7 @@ jobs:
     steps:
       - name: Start DEV Service
         run: |
-          curl -X POST "https://api.render.com/v1/services/cupbchpopnds7392j3mg/start" \
-          -H "Authorization: Bearer rnd_8rqkfGCoMqcsZBEFSCIO1zVGIGR6"
+          curl -X GET "https://api.render.com/deploy/srv-cupbchpopnds7392j3mg?key=0HdB10irUeI"
       - name: Start UAT Service
         run: |
-          curl -X POST "https://api.render.com/v1/services/cupdlvpopnds73938vjg/start" \
-          -H "Authorization: Bearer rnd_URkLeA0rZaaK3hASQpb6Sf7n51dC"
+          curl -X GET "https://api.render.com/deploy/srv-cupdlvpopnds73938vjg?key=TY5yh7vuSOc"
