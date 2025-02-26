@@ -1,10 +1,6 @@
 name: Stop Render Web Service
 
 on:
-  push:
-    branches:
-      - release/dev
-      - release/uat
   schedule:
     - cron: "59 21 * * *" # Every day at 8:59 PM UTC (which corresponds to 11:59 PM Kyiv time)
 
