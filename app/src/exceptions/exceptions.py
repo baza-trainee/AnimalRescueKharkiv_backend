@@ -50,6 +50,7 @@ class ReturnMessages:
     crm_invalid_date_format: str = "Invalid date format. Expected string in DD/MM/YYYY or YYYY-MM-DD format."
 
     non_empty_string: str = "String should not be empty"
+    definition_for_model_not_found: str = "Definition id='%d' referenced in the field '%s' not found"
 
     date_not_past_present: str = "Date must be in the past or today"
 
