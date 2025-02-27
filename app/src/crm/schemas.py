@@ -186,13 +186,15 @@ class DynamicResponse(BaseModel):
                 for key, value in serialized_data.items()
                 if value is not None}
 
+class AnimalResponseReference(BaseModel):
+    animal_id: SixDigitID
 
 class LocationBase(BaseModel):
-    name: SanitizedString
+    name: SanitizedString = Field(min_length=2, max_length=100)
 
 
 class AnimalTypeBase(BaseModel):
-    name: SanitizedString
+    name: SanitizedString = Field(min_length=2, max_length=50)
 
 
 class AnimalLocationBase(BaseModel):
@@ -203,19 +205,19 @@ class AnimalLocationBase(BaseModel):
 
 class VaccinationBase(BaseModel):
     is_vaccinated: bool
-    vaccine_type: Optional[SanitizedString] = Field(default=None, max_length=100)
+    vaccine_type: Optional[SanitizedString] = Field(default=None, min_length=2, max_length=100)
     date: Optional[PastOrPresentDate] = None
     comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class DiagnosisBase(BaseModel):
-    name: Optional[SanitizedString] = Field(default=None, max_length=200)
+    name: Optional[SanitizedString] = Field(default=None, min_length=2, max_length=200)
     date: Optional[PastOrPresentDate] = None
     comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
 
 class ProcedureBase(BaseModel):
-    name: Optional[SanitizedString] = Field(default=None, max_length=200)
+    name: Optional[SanitizedString] = Field(default=None, min_length=2, max_length=200)
     date: Optional[PastOrPresentDate] = None
     comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
@@ -227,28 +229,21 @@ class AnimalTypeResponse(AnimalTypeBase, IntReferenceBase):
 class LocationResponse(LocationBase, IntReferenceBase):
     model_config = ConfigDict(from_attributes=True)
 
-class AnimalLocationResponse(AnimalLocationBase, ResponseReferenceBase):
-    animal_id: SixDigitID
+class AnimalLocationResponse(AnimalLocationBase, ResponseReferenceBase, AnimalResponseReference):
     location: LocationResponse
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class VaccinationResponse(VaccinationBase, ResponseReferenceBase):
-    animal_id: SixDigitID
-
+class VaccinationResponse(VaccinationBase, ResponseReferenceBase, AnimalResponseReference):
     model_config = ConfigDict(from_attributes=True)
 
 
-class DiagnosisResponse(DiagnosisBase, ResponseReferenceBase):
-    animal_id: SixDigitID
-
+class DiagnosisResponse(DiagnosisBase, ResponseReferenceBase, AnimalResponseReference):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProcedureResponse(ProcedureBase, ResponseReferenceBase):
-    animal_id: SixDigitID
-
+class ProcedureResponse(ProcedureBase, ResponseReferenceBase, AnimalResponseReference):
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -328,16 +323,16 @@ class AnimalNameUpdate(BaseModel, NamedSection):
 class OriginUpdate(BaseModel, NamedSection):
     _section_name = "origin"
     origin__arrival_date: PastOrPresentDate
-    origin__city: SanitizedString = Field(max_length=100)
-    origin__address: Optional[SanitizedString] = Field(default=None, max_length=100)
+    origin__city: SanitizedString = Field(min_length=2, max_length=100)
+    origin__address: Optional[SanitizedString] = Field(default=None, min_length=2, max_length=100)
 
 
 class GeneralUpdate(BaseModel, NamedSection):
     _section_name = "general"
     general__animal_type: Optional[IntReferenceBase] = Field(default=None)
     general__gender: Gender = Gender.male
-    general__weight: Optional[float] = Field(default=None, ge=0.0)
-    general__age: Optional[float] = Field(default=None, le=100.0)
+    general__weight: Optional[float] = Field(default=None, gt=0.0)
+    general__age: Optional[float] = Field(default=None, gt=0.0, le=100.0)
     general__specials: Optional[SanitizedString] = Field(default=None, max_length=200)
 
 
@@ -353,8 +348,8 @@ class CommentUpdate(BaseModel, NamedSection):
 
 class AdoptionUpdate(BaseModel, NamedSection):
     _section_name = "adoption"
-    adoption__country: Optional[SanitizedString] = Field(default=None, max_length=50)
-    adoption__city: Optional[SanitizedString] = Field(default=None, max_length=50)
+    adoption__country: Optional[SanitizedString] = Field(default=None, min_length=2, max_length=50)
+    adoption__city: Optional[SanitizedString] = Field(default=None, min_length=2, max_length=50)
     adoption__date: Optional[PastOrPresentDate] = None
     adoption__comment: Optional[SanitizedString] = Field(default=None, max_length=500)
 
@@ -448,9 +443,8 @@ class AnimalState(enum.Enum):
     adopted: str = "adopted"
 
 
-class EditingLockResponse(BaseModel):
+class EditingLockResponse(AnimalResponseReference):
     user: UserEmail
     section_name: str
-    animal_id: SixDigitID
 
     model_config = ConfigDict(from_attributes=True)

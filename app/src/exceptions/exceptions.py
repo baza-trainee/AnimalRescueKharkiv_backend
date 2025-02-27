@@ -49,6 +49,8 @@ class ReturnMessages:
     crm_acquire_lock_failed: str = "Failed to acquire lock on '%s' section for '%s' user"
     crm_invalid_date_format: str = "Invalid date format. Expected string in DD/MM/YYYY or YYYY-MM-DD format."
 
+    non_empty_string: str = "String should not be empty"
+
     date_not_past_present: str = "Date must be in the past or today"
 
 
