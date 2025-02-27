@@ -127,6 +127,8 @@ class UpdateRefsStrategy(UpdateStrategy):
                 if isinstance(field, self.__read_def_id_type) and self.__read_def_func:
                     def_id = self.__def_id_accessor(field)
                     definition = await self.__read_def_func(def_id , db)
+                    if not definition:
+                        raise ValueError(RETURN_MSG.definition_for_model_not_found % (def_id, field_name))
         if ref_obj:
             model = await self.__update_reference(model=model,
                                                   ref_obj=ref_obj,
@@ -166,7 +168,7 @@ class UpdateRefsStrategy(UpdateStrategy):
                             animal=model,
                             user=user,
                             db=db)
-        else:
+        elif not self.__read_def_func:
             model = await self.__add_func(
                         model=update_model,
                         animal=model,
@@ -191,7 +193,7 @@ class UpdateRefsStrategy(UpdateStrategy):
                                                 model=ref_obj,
                                                 user=user,
                                                 db=db)
-        else:
+        elif not self.__read_def_func:
             model = await self.__update_func(update_model=update_model,
                                                 model=ref_obj,
                                                 user=user,
