@@ -6,7 +6,15 @@ from pydantic import UUID4, BaseModel, BeforeValidator, Field, PlainSerializer, 
 from src.exceptions.exceptions import RETURN_MSG
 
 UUIDString = Annotated[UUID4, PlainSerializer(lambda x: str(x), return_type=str)]
-SanitizedString = Annotated[str, BeforeValidator(lambda x: x.strip())]
+
+def sanitize_string(value: str) -> str:
+    """Sanitizes and validates string for empty value"""
+    value = value.strip()
+    if value:
+        return value
+    raise ValueError(RETURN_MSG.non_empty_string)
+
+SanitizedString = Annotated[str, BeforeValidator(sanitize_string)]
 SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
 
 class ReferenceBase(BaseModel):
