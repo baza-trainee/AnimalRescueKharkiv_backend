@@ -16,8 +16,8 @@ from pydantic import (
     Field,
     PlainSerializer,
     computed_field,
-    field_validator,
     model_serializer,
+    model_validator,
 )
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from src.base_schemas import IntReferenceBase, ResponseReferenceBase, SanitizedString, UUIDReferenceBase
@@ -27,13 +27,14 @@ from src.exceptions.exceptions import RETURN_MSG
 from src.media.schemas import MediaAssetResponse
 from src.roles.models import Role
 from src.users.schemas import UserResponse
+from typing_extensions import Self
 
 SixDigitID = Annotated[int, PlainSerializer(lambda x: str(x).zfill(6), return_type=str)]
 UserEmail = Annotated[UserResponse, PlainSerializer(lambda x: x.email, return_type=str)]
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
-def validate_past_or_present(value: date | str) -> date | str:
+def validate_past_or_present(value: date | str) -> date:
     """Validates value for past or present date"""
     if isinstance(value, date):
         return value
@@ -55,7 +56,7 @@ def validate_past_or_present(value: date | str) -> date | str:
     return parsed_date
 
 
-PastOrPresentDate = Annotated[date | str, BeforeValidator(validate_past_or_present), Field(
+PastOrPresentDate = Annotated[date, BeforeValidator(validate_past_or_present), Field(
         example="YYYY-MM-DD or DD/MM/YYYY",
         json_schema_extra={"type": "date", "format": "<= datetime.now().date()"},
     )]
@@ -201,6 +202,12 @@ class AnimalLocationBase(BaseModel):
     location: IntReferenceBase
     date_from: PastOrPresentDate
     date_to: Optional[PastOrPresentDate] = None
+
+    @model_validator(mode="after")
+    def __validate_location_dates(self) -> Self:
+        if self.date_to and self.date_to < self.date_from:
+            raise ValueError(RETURN_MSG.crm_date_range_invalid % ("date_to", "date_from"))
+        return self
 
 
 class VaccinationBase(BaseModel):

@@ -48,6 +48,7 @@ class ReturnMessages:
     crm_lock_not_found: str = "Section '%s' is not locked by user '%s'"
     crm_acquire_lock_failed: str = "Failed to acquire lock on '%s' section for '%s' user"
     crm_invalid_date_format: str = "Invalid date format. Expected string in DD/MM/YYYY or YYYY-MM-DD format."
+    crm_date_range_invalid: str = "The '%s' value cannot be less than the '%s' one"
 
     non_empty_string: str = "String should not be empty"
     definition_for_model_not_found: str = "Definition id='%d' referenced in the field '%s' not found"
