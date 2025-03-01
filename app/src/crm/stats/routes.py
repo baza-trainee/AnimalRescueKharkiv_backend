@@ -2,14 +2,14 @@ import logging
 import uuid
 from datetime import date
 from random import randint
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Tuple, Type
 
 import uvicorn
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Security, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Security, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi_limiter.depends import RateLimiter
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.authorization.service import authorization_service
 from src.configuration.db import get_db
@@ -24,13 +24,28 @@ logger = logging.getLogger(uvicorn.logging.__name__)
 router = APIRouter(prefix=settings.crm_prefix+settings.stats_prefix, tags=["crm-stats"])
 stats_router_cache: Cache = Cache(owner=router, all_prefix="stats", ttl=settings.default_cache_ttl)
 
+def __validate_query(model: Type[BaseModel]) ->  Callable[[Request], Coroutine[Any, Any, BaseModel]]:
+    async def __validate_query(request: Request) -> BaseModel:
+        try:
+            return model(**request.query_params)
+        except ValidationError as e:
+            error_details = []
+            for error in e.errors():
+                if "ctx" in error and isinstance(error["ctx"].get("error"), ValueError):
+                    error["ctx"]["error"] = str(error["ctx"]["error"])  # Convert ValueError to string
+                error_details.append(error)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=error_details,
+            )
+    return __validate_query
 
 @router.get("/countries", response_model=LabeledStats,
             description=settings.rate_limiter_get_description, dependencies=[Depends(RateLimiter(
                  times=settings.rate_limiter_get_times,
                  seconds=settings.rate_limiter_seconds))])
 async def read_adotpion_countries_stats(
-    query: DateQuery = Depends(),
+    query: DateQuery = Depends(__validate_query(DateQuery)),
     _current_user: User = Security(authorization_service.authorize_user, scopes=["crm:read"]),
     db: AsyncSession = Depends(get_db),
     ) -> LabeledStats:
@@ -84,7 +99,7 @@ async def read_departments_stats(
                  times=settings.rate_limiter_get_times,
                  seconds=settings.rate_limiter_seconds))])
 async def read_animal_stats(
-    query: DateQuery = Depends(),
+    query: DateQuery = Depends(__validate_query(DateQuery)),
     _current_user: User = Security(authorization_service.authorize_user, scopes=["crm:read"]),
     db: AsyncSession = Depends(get_db),
     ) -> AnimalStatusStats:
