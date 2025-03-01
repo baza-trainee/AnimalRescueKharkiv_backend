@@ -1,10 +1,11 @@
-from typing import Annotated, List, Optional
+from typing import Annotated, List, Optional, Self
 
 from fastapi import Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from src.base_schemas import ResponseReferenceBase
 from src.configuration.settings import settings
 from src.crm.schemas import PastOrPresentDate
+from src.exceptions.exceptions import RETURN_MSG
 
 
 class LabeledStats(BaseModel):
@@ -20,3 +21,9 @@ class AnimalStatusStats(BaseModel):
 class DateQuery(BaseModel):
     from_date: Optional[PastOrPresentDate] = None
     to_date: Optional[PastOrPresentDate] = None
+
+    @model_validator(mode="after")
+    def __validate_date_range(self) -> Self:
+        if self.to_date and self.from_date and self.to_date < self.from_date:
+            raise ValueError(RETURN_MSG.crm_date_range_invalid % ("date_to", "date_from"))
+        return self
