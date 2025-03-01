@@ -270,7 +270,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         statement = self.__filter(statement, animal_types, lambda x: Animal.general__animal_type_id.in_(x))
         statement = self.__filter(statement, gender, lambda x: Animal.general__gender == x)
         statement = self.__filter(statement, current_locations,
-                                  lambda x: func.max(Animal.locations).any_(Location.id.in_(x)))
+                                  lambda x: Animal.current_location_id.in_(x))
         if animal_state is not None:
             match animal_state:
                 case AnimalState.active:
