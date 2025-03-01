@@ -2,9 +2,24 @@ import enum
 from typing import TYPE_CHECKING, List
 from uuid import uuid4
 
-from sqlalchemy import UUID, Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import (
+    UUID,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+    select,
+)
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import DeclarativeBase, Mapped, aliased, mapped_column, relationship
+from sqlalchemy.sql.expression import Selectable
 from src.configuration.db import Base
 from src.media.models import MediaAsset
 
@@ -81,6 +96,26 @@ class Animal(Base):
     procedures: Mapped[List["Procedure"]] = relationship("Procedure",
                                                          cascade="all, delete-orphan",
                                                          lazy="joined")
+
+    @hybrid_property
+    def current_location(self) -> DeclarativeBase:
+        """Returns the latest location object"""
+        if not self.locations:
+            return None
+        return max(self.locations, key=lambda loc: loc.date_from, default=None)
+
+
+    @current_location.expression
+    @classmethod
+    def current_location_id(cls) -> Selectable:
+        """SQL expression to get the latest AnimalLocation object."""
+        return (
+            select(AnimalLocation.location_id)
+            .where(AnimalLocation.animal_id == cls.id)
+            .order_by(AnimalLocation.date_from.desc())  # Get the most recent one
+            .limit(1)
+            .scalar_subquery()
+        )
 
 
 class AnimalType(Base):
