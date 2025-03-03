@@ -65,7 +65,6 @@ async def read_adotpion_countries_stats(
     db: AsyncSession = Depends(get_db),
     ) -> LabeledStats:
     """Retrieves contries stats"""
-    logger.info(query.from_date)
     cache_key = stats_router_cache.get_all_records_cache_key_with_params("countries",
                                                                          query.from_date,
                                                                          query.to_date)
