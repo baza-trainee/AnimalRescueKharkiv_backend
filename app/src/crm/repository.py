@@ -7,6 +7,7 @@ from uuid import UUID
 
 import uvicorn
 from sqlalchemy import Select, and_, any_, asc, desc, func, or_
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import DeclarativeBase
@@ -285,11 +286,10 @@ class AnimalsRepository(metaclass=SingletonMeta):
         statement = self.__filter(statement, is_sterilized, lambda x: Animal.sterilization__done == x)
         statement = self.__filter(statement, sterilization_date, lambda x: Animal.sterilization__date == x)
         if is_vaccinated is not None:
-            match is_vaccinated:
-                case True:
-                    statement = statement.filter(Animal.vaccinations.any())
-                case False:
-                    statement = statement.filter(~Animal.vaccinations.any())
+            expression: ColumnElement[bool] = Animal.vaccinations.any(Vaccination.is_vaccinated == is_vaccinated)
+            if not is_vaccinated:
+                expression = or_(expression, ~Animal.vaccinations.any())
+            statement = statement.filter(expression)
         statement = self.__filter(statement, vaccination_date,
                                   lambda x: Animal.vaccinations.any(Vaccination.date == x))
         statement = statement.offset(skip).limit(limit)
