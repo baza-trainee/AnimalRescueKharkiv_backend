@@ -1,8 +1,6 @@
-from typing import Annotated, List, Optional, Self
+from typing import List, Optional, Self
 
-from fastapi import Query
-from pydantic import BaseModel, ConfigDict, model_validator
-from src.base_schemas import ResponseReferenceBase
+from pydantic import BaseModel, model_validator
 from src.configuration.settings import settings
 from src.crm.schemas import PastOrPresentDate
 from src.exceptions.exceptions import RETURN_MSG

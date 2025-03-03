@@ -8,7 +8,6 @@ from typing import Annotated, Callable, ClassVar, List, Optional, Type
 
 import uvicorn
 from dateutil import parser  # type: ignore[import-untyped]
-from fastapi import HTTPException, Query, status
 from pydantic import (
     BaseModel,
     BeforeValidator,
