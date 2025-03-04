@@ -239,7 +239,9 @@ class AnimalsRepository(metaclass=SingletonMeta):
                        parameter: object | None,
                        expression: Callable[[Any], ColumnElement[bool]]) -> Select[Tuple[DeclarativeBase]]:
         if parameter is not None:
-            statement = statement.filter(expression(parameter.strip() if isinstance(parameter, str) else parameter))
+            statement = statement.filter(expression(parameter.strip().lower()
+                                                    if isinstance(parameter, str)
+                                                    else parameter))
         return statement
 
     async def read_animals(self,
@@ -267,7 +269,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
             if condition is not None:
                 statement = statement.filter(condition)
         statement = self.__filter(statement, arrival_date, lambda x: Animal.origin__arrival_date == x)
-        statement = self.__filter(statement, city, lambda x: Animal.origin__city == x)
+        statement = self.__filter(statement, city, lambda x: func.lower(Animal.origin__city) == x)
         statement = self.__filter(statement, animal_types, lambda x: Animal.general__animal_type_id.in_(x))
         statement = self.__filter(statement, gender, lambda x: Animal.general__gender == x)
         statement = self.__filter(statement, current_locations,

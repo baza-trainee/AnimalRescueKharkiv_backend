@@ -17,8 +17,8 @@ jobs:
 
       - name: Ping DEV
         run: |
-          curl -X GET https://animalrescuekharkiv-backend.onrender.com/healthcheck
+          curl -X GET https://animalrescuekharkiv-backend.onrender.com/keepalive
 
       - name: Ping UAT
         run: |
-          curl -X GET https://animalrescuekharkiv-backend-xjom.onrender.com/healthcheck
+          curl -X GET https://animalrescuekharkiv-backend-xjom.onrender.com/keepalive
