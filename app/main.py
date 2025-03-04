@@ -6,7 +6,7 @@ import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict
 
@@ -123,13 +123,17 @@ app.add_middleware(
 
 @app.get("/")
 def read_root() -> dict:
-    """..."""
+    """Welcome"""
     return {"message": "Welcome!"}
 
+@app.get("/keepalive")
+def keepalive() -> dict:
+    """Keepalive"""
+    return {"Status": "OK", "Time": f"{datetime.now(timezone.utc)}"}
 
 @app.get("/healthcheck")
 async def healthchecker(db: AsyncSession = Depends(get_db)) -> dict:
-    """..."""
+    """Healthcheck"""
     try:
         # Make request
         result = await db.execute(text("SELECT 1"))
