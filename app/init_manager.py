@@ -14,7 +14,7 @@ from src.permissions.schemas import PermissionBase
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase, RoleUpdate
 from src.users.repository import users_repository
-from src.users.schemas import UserCreate
+from src.users.schemas import UserCreate, UserUpdate
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
@@ -60,6 +60,8 @@ class DataInitializer(AutoInitializer):
                 existing = await permissions_repository.read_permission(perm_obj, self.db)
                 if not existing:
                     await permissions_repository.create_permission(perm_obj, self.db)
+                elif perm_obj.title:
+                    await permissions_repository.update_title(existing, perm_obj.title, self.db)
 
     @AutoInitializer.data_init(index=2)
     async def __init_roles(self) -> None:
@@ -72,6 +74,8 @@ class DataInitializer(AutoInitializer):
                     existing = await roles_repository.create_role(role_obj, self.db)
                 role_update = RoleUpdate(**role_model)
                 if role_update and role_update.assign:
+                    if role_update.title:
+                        existing = await roles_repository.update_title(existing, role_update.title, self.db)
                     permissions = await permissions_repository.read_permissions(role_update.assign, self.db)
                     for permission in permissions:
                         if permission and (not existing.permissions or
@@ -87,6 +91,8 @@ class DataInitializer(AutoInitializer):
                 existing = await users_repository.read_user(user_obj, self.db)
                 if not existing:
                     existing = await users_repository.create_user(user_obj, self.db)
+                elif user_obj.first_name or user_obj.last_name or user_obj.phone:
+                    existing  = await users_repository.update_user(existing, UserUpdate(**user), self.db)
                 if user_obj.role and user_obj.role.name and user_obj.role.domain:
                     role = await roles_repository.read_role(user_obj.role, self.db)
                     if role and (not existing.role or existing.role.id != role.id):
