@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Dict
 
 import uvicorn
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, Security, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_limiter.depends import RateLimiter
 from pydantic import EmailStr
@@ -15,12 +15,14 @@ from src.auth.managers import token_manager
 from src.auth.models import SecurityToken, TokenType
 from src.auth.schemas import EmailInvite, TokenBase, UserRegister
 from src.auth.service import auth_service
+from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.roles.repository import roles_repository
 from src.roles.schemas import RoleBase
 from src.services.email import email_service
+from src.users.models import User
 from src.users.repository import users_repository
 from src.users.schemas import UserBase, UserCreate, UserPasswordNew, UserResponse
 
@@ -39,6 +41,7 @@ async def invite_user(
     body: EmailInvite,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    _current_user: User = Security(authorization_service.authorize_user, scopes=["security:administer"]),
 ) -> Dict[str, str]:
     """Sends an invitation email to a new user for registration"""
     try:
