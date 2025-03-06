@@ -38,10 +38,13 @@ PwdStr = Annotated[str, BeforeValidator(validate_password),Field(
 
 def validate_email(value: EmailStr) -> EmailStr:
     """Validates email value"""
-    if not settings.email_regex.fullmatch(value):
-        raise ValueError(RETURN_MSG.user_email_invalid_format)
-    if value.endswith(settings.email_restricted_domains_list):
-        raise ValueError(RETURN_MSG.user_email_invalid % ", ".join(settings.email_restricted_domains_list))
+    try:
+        if not settings.email_regex.fullmatch(value):
+            raise ValueError(RETURN_MSG.user_email_invalid_format)
+        if value.endswith(settings.email_restricted_domains_list):
+            raise ValueError(RETURN_MSG.user_email_invalid % ", ".join(settings.email_restricted_domains_list))
+    except TypeError as e:
+        raise ValueError(e.args[0])
     return value
 
 ExtEmailStr = Annotated[EmailStr, BeforeValidator(validate_email),Field(
