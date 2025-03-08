@@ -53,7 +53,7 @@ async def invite_user(
         role_model = RoleBase(name=body.role, domain=domain)
         existing_role = await roles_repository.read_role(model=role_model, db=db)
         if not existing_role:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.role_not_found)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=RETURN_MSG.role_not_found)
         title = existing_role.title or existing_role.name
         template_body = {"url": settings.url_register, "role": title.capitalize()}
         token = await auth_service.create_email_token(
