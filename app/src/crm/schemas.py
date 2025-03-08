@@ -426,10 +426,10 @@ class GeneralCreate(GeneralUpdate):
     general__animal_type: IntReferenceBase = Field()
 
 
-class AnimalCreate(ProceduresUpdate,
-                   DiagnosesUpdate,
-                   VaccinationsUpdate,
-                   LocationsUpdate,
+class AnimalCreate(ProceduresCreate,
+                   DiagnosesCreate,
+                   VaccinationsCreate,
+                   LocationsCreate,
                    MediaUpdate,
                    MicrochippingUpdate,
                    SterilizationUpdate,
