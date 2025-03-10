@@ -336,7 +336,7 @@ class OriginUpdate(BaseModel, NamedSection):
 class GeneralUpdate(BaseModel, NamedSection):
     _section_name = "general"
     general__animal_type: Optional[IntReferenceBase] = Field(default=None)
-    general__gender: Gender = Gender.male
+    general__gender: Gender
     general__weight: Optional[float] = Field(default=None, gt=0.0)
     general__age: Optional[float] = Field(default=None, gt=0.0, le=100.0)
     general__specials: Optional[SanitizedString] = Field(default=None, max_length=200)
@@ -406,7 +406,7 @@ class ProceduresUpdate(BaseModel, NamedSection):
 
 
 class LocationsCreate(BaseModel):
-    locations: Optional[List[AnimalLocationBase]] = None
+    locations: List[AnimalLocationBase] = Field(..., min_length=1)
 
 
 class VaccinationsCreate(BaseModel):
