@@ -3,18 +3,20 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List
 
 import uvicorn
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Security, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import Response
 from fastapi_limiter.depends import RateLimiter
 from pydantic import UUID4, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.authorization.service import authorization_service
 from src.configuration.db import get_db
 from src.configuration.settings import settings
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.repository import media_repository
 from src.media.schemas import MediaAssetResponse
 from src.services.cache import Cache
+from src.users.models import User
 
 if TYPE_CHECKING:
     from src.media.models import MediaAsset
@@ -110,6 +112,8 @@ async def read_media(media_id: UUID4,
                                               seconds=settings.rate_limiter_seconds))])
 async def create_media_asset(file: UploadFile = File(),
                         db: AsyncSession = Depends(get_db),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["media:write"]),
                     ) -> MediaAssetResponse:
     """Creates a new media asset from the uploaded media file. Returns media response object"""
     media_asset: MediaAsset = None
@@ -127,6 +131,8 @@ async def create_media_asset(file: UploadFile = File(),
                                               seconds=settings.rate_limiter_seconds))])
 async def remove_media_asset(media_id: UUID4,
                         db: AsyncSession = Depends(get_db),
+                        _current_user: User = Security(authorization_service.authorize_user,
+                                                       scopes=["media:write"]),
                     ) -> None:
     """Deletes a media asset by its unique identifier"""
     media_asset: MediaAsset = await media_repository.read_media_asset(media_asset_id=media_id, db=db)
