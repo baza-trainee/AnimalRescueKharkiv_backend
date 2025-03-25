@@ -146,7 +146,10 @@ async def search_users(
     cache_key = users_router_cache.get_all_records_cache_key_with_params(domain, roles, sorting.sort, *terms)
     users: List[UserResponse] = await users_router_cache.get(key=cache_key)
     if not users:
-        users = await users_repository.search_users(*terms, domain=domain, roles=roles, sort=sorting.sort, db=db)
+        try:
+            users = await users_repository.search_users(*terms, domain=domain, roles=roles, sort=sorting.sort, db=db)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=jsonable_encoder(e.args))
         users = [UserResponse.model_validate(user) for user in users]
         if users:
             await users_router_cache.set(key=cache_key, value=users)
