@@ -15,7 +15,7 @@ def sanitize_string(value: str) -> str:
     raise ValueError(RETURN_MSG.non_empty_string)
 
 SanitizedString = Annotated[str, BeforeValidator(sanitize_string)]
-SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
+SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_\+]+\|(asc|desc)$"
 
 class ReferenceBase(BaseModel):
     pass
