@@ -40,7 +40,7 @@ class ReturnMessages:
 
     access_denied: str = "Access denied. Required permissions: %s"
 
-    illegal_sort: str = "Sort expression should be in format {field}|{direction}"
+    illegal_sort: str = "Sort expression should be in format {field_1}+{field_2}+{field_n}|{direction}"
     illegal_sort_field_name:str = "Can't sort results by invalid '%s' field"
 
     crm_animal_type_not_found: str = "Animal type not found"
