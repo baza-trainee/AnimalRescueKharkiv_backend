@@ -123,6 +123,8 @@ async def read_animals( query: str  | None = Query(default=None,
                 sort=sorting.sort,
                 db=db)
             animals = [AnimalResponse.model_validate(animal) for animal in animals]
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=jsonable_encoder(e.args))
         except Exception as err:
             logger.exception("An error occured:\n")
             raise HTTPException(detail=jsonable_encoder(err.args), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
