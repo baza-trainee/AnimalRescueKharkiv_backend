@@ -15,7 +15,7 @@ def sanitize_string(value: str) -> str:
     raise ValueError(RETURN_MSG.non_empty_string)
 
 SanitizedString = Annotated[str, BeforeValidator(sanitize_string)]
-SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_]+\|(asc|desc)$"
+SORTING_VALIDATION_REGEX = r"^[a-zA-Z0-9_\+]+\|(asc|desc)$"
 
 class ReferenceBase(BaseModel):
     pass
@@ -40,9 +40,9 @@ def validate_sorting(value: str) -> str:
 
 SortingStr = Annotated[str, BeforeValidator(validate_sorting), Field(
         example="created_at|desc",
-        json_schema_extra={"type": "string", "format": "{field}|{direction}"},
+        json_schema_extra={"type": "string", "format": "{field_1}+{field_2}+{field_n}|{direction}"},
     )]
 
 class Sorting(BaseModel):
     sort: Optional[SortingStr] = Query(default="created_at|desc",
-                                description="Sort option in format of {field}|{direction}. Default: created_at|desc")
+            description="Sort option in format of {field_1}+{field_2}+{field_n}|{direction}. Default: created_at|desc")
