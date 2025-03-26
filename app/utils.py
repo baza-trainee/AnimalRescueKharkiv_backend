@@ -1,13 +1,24 @@
 import inspect
 import pkgutil
+import re
 from importlib import import_module
 from importlib.machinery import FileFinder
 from types import ModuleType
-from typing import Any, Callable, Dict
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, TypeVar
 
 import src
 from fastapi import APIRouter
+from sqlalchemy import asc, desc, func
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.sql.elements import UnaryExpression
+from src.base_schemas import SORTING_VALIDATION_REGEX
 from src.configuration.db import Base
+from src.exceptions.exceptions import RETURN_MSG
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.functions import coalesce
+
+_T = TypeVar("_T")
 
 
 def get_app_models() -> list:
@@ -86,3 +97,35 @@ def import_models_from_src() -> None:
                 (attr is not Base) and (attr_name not in imported_classes):
                         imported_classes[attr_name] = attr
                         globals()[attr_name] = attr
+
+
+def get_sql_order_expression(sort: str,
+                             model_type: DeclarativeBase,
+                             default_dorting: UnaryExpression[_T],
+                            ) -> UnaryExpression[_T]:
+        """Creates SqlAlchemy order expression"""
+        if not re.match(SORTING_VALIDATION_REGEX, sort):
+            raise ValueError(RETURN_MSG.illegal_sort)
+        field, direction = sort.split("|", 1)
+        order_attr = None
+        if "+" in field:
+            parts: List[object] = []
+            for part in field.split("+"):
+                if not hasattr(model_type, part):
+                    raise ValueError(RETURN_MSG.illegal_sort_field_name % part)
+                attr: coalesce[_T] = func.coalesce(getattr(model_type, part), "")
+                parts.append(attr)
+                parts.append(" ")
+                order_attr = func.concat(*parts)
+        else:
+            if not hasattr(model_type, field):
+                raise ValueError(RETURN_MSG.illegal_sort_field_name % field)
+            order_attr = getattr(model_type, field)
+
+        if order_attr is not None:
+            match direction.lower():
+                case "asc":
+                    return asc(order_attr)
+                case "desc":
+                    return desc(order_attr)
+        return default_dorting

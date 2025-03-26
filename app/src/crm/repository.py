@@ -12,8 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
-from sqlalchemy.sql.elements import UnaryExpression
-from src.base_schemas import SORTING_VALIDATION_REGEX
 from src.configuration.settings import settings
 from src.crm.models import (
     Animal,
@@ -47,8 +45,7 @@ from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
 from src.singleton import SingletonMeta
 from src.users.models import User
-
-_T = TypeVar("_T")
+from utils import get_sql_order_expression
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
@@ -223,17 +220,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
             expression.append(func.lower(Animal.name).ilike(any_(names)))
         return or_(*expression)
 
-    def __get_order_expression(self, sort: str) -> UnaryExpression[_T]:
-        if not re.match(SORTING_VALIDATION_REGEX, sort):
-            raise ValueError(RETURN_MSG.illegal_sort)
-        field, direction = sort.split("|", 1)
-        match direction.lower():
-            case "asc":
-                return asc(getattr(Animal, field))
-            case "desc":
-                return desc(getattr(Animal, field))
-        return desc(Animal.created_at)
-
     def __filter(self,
                        statement: Select[Tuple[DeclarativeBase]],
                        parameter: object | None,
@@ -296,7 +282,8 @@ class AnimalsRepository(metaclass=SingletonMeta):
                                   lambda x: Animal.vaccinations.any(Vaccination.date == x))
         statement = statement.offset(skip).limit(limit)
         if sort:
-            statement = statement.order_by(self.__get_order_expression(sort=sort))
+            statement = statement.order_by(
+                 get_sql_order_expression(sort=sort, model_type=Animal, default_dorting=desc(Animal.created_at)))
         result = await db.execute(statement)
         animals = result.unique().scalars().all()
         return list(animals)
