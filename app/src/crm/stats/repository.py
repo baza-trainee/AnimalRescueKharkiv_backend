@@ -3,7 +3,7 @@ from datetime import date
 from typing import List, Optional, Tuple, TypeVar
 
 import uvicorn
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.configuration.settings import settings
@@ -36,7 +36,8 @@ class StatsRepository(metaclass=SingletonMeta):
 
     async def get_total_animal_count(self, db: AsyncSession) -> int:
         """Returns the total count of animal records."""
-        statement = select(func.count(Animal.id))
+        statement = select(func.count(Animal.id)).where(
+            and_(Animal.death__dead.is_(False), Animal.adoption__date.is_(None)))
         result = await db.execute(statement)
         return result.scalar_one()
 
