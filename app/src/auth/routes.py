@@ -274,6 +274,7 @@ async def reset_pasword(
                                   template_body=template_body,
                                   template_name=email_service.EmailTemplate.PASS_CHANGED,
                                   language=language)
+        await token_manager.delete_all_tokens_for_user(user=user, db=db)
         return {"message": RETURN_MSG.pwd_changed} # noqa: TRY300
     except HTTPException as e:
         logger.error(f"{e}")
