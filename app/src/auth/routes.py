@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from src.auth.extensions import OAuth2PasswordWithDomainRequestForm
 from src.auth.managers import token_manager
 from src.auth.models import SecurityToken, TokenType
-from src.auth.schemas import EmailInvite, TokenBase, UserRegister
+from src.auth.schemas import EmailInvite, TokenBase, TokenValidate, UserRegister
 from src.auth.service import auth_service
 from src.authorization.service import authorization_service
 from src.configuration.db import get_db
@@ -282,3 +282,22 @@ async def reset_pasword(
     except Exception as e:
         logger.error(f"Failed to reset password: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=RETURN_MSG.pwd_change_failed)
+
+@router.post("/token/validate", status_code=status.HTTP_200_OK,
+             description=settings.rate_limiter_description, dependencies=[Depends(RateLimiter(
+                  times=settings.rate_limiter_times, seconds=settings.rate_limiter_seconds))])
+async def validate_token(
+    body: TokenValidate,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, str]:
+    """Validates token"""
+    try:
+        await auth_service.validate_token(token=body.token, token_type=body.token_type, db=db)
+        return {"message": RETURN_MSG.token_valid} # noqa: TRY300
+    except HTTPException as e:
+        logger.error(f"{e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=RETURN_MSG.token_invalid)
+    except Exception as e:
+        logger.error(f"Failed to validate token: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=RETURN_MSG.token_validation_failed)
