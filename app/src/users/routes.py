@@ -9,6 +9,7 @@ from fastapi_limiter.depends import RateLimiter
 from pydantic import UUID4, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.auth.managers import token_manager
 from src.authorization.service import authorization_service
 from src.base_schemas import Sorting
 from src.configuration.db import get_db
@@ -242,6 +243,7 @@ async def change_user_password(
                                   template_body=template_body,
                                   template_name=email_service.EmailTemplate.PASS_CHANGED,
                                   language=language)
+        await token_manager.delete_all_tokens_for_user(user=user, db=db)
         return user # noqa:TRY300
     except ValidationError as err:
         raise HTTPException(detail=jsonable_encoder(err.errors()), status_code=status.HTTP_400_BAD_REQUEST)

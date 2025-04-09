@@ -1,6 +1,7 @@
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
+from src.auth.models import TokenType
 from src.users.schemas import ExtEmailStr, PwdStr
 
 
@@ -26,3 +27,8 @@ class UserRegister(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
+
+
+class TokenValidate(BaseModel):
+    token: str
+    token_type: Optional[TokenType] = TokenType.reset
