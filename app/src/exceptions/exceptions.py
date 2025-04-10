@@ -25,6 +25,8 @@ class ReturnMessages:
     pwd_not_match: str = "Passwords do not match"
 
     token_invalid: str = "Invalid token"
+    token_valid: str = "Valid token"
+    token_validation_failed: str = "Token validation failed"
     token_refresh_missing: str = "Refresh token missing"
     token_access_missing: str = "Access token missing"
     token_email_invalid: str = "Email does not match the token"

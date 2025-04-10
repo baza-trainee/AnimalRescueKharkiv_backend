@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 import uvicorn
-from sqlalchemy import desc
+from sqlalchemy import delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.auth.models import SecurityToken, TokenType
@@ -69,18 +69,25 @@ class TokenManager(metaclass=SingletonMeta):
     async def delete_expired_tokens(self) -> None:
         """Deletes expired security tokens from database"""
         async with SessionLocal() as db:
-            statement = select(SecurityToken)
-            statement = statement.filter(SecurityToken.expire_on < datetime.now(timezone.utc).astimezone())
+            statement = delete(SecurityToken).where(SecurityToken.expire_on < datetime.now(timezone.utc).astimezone())
             result = await db.execute(statement)
-            tokens = result.unique().scalars().all()
-            count = len(tokens)
-            for token in tokens:
-                await db.delete(token)
             await db.commit()
-            if count:
-                logger.info(f"{self.__class__.__name__}: {count} security tokens successfully deleted")
+            if result.rowcount:
+                logger.info(f"{self.__class__.__name__}: {result.rowcount} security tokens successfully deleted")
             else:
                 logger.info(f"{self.__class__.__name__}: No security tokens to delete")
+
+    async def delete_all_tokens_for_user(
+            self,
+            user: User,
+            db: AsyncSession,
+    ) -> int:
+        """Deletes all security tokens for the given user"""
+        statement = delete(SecurityToken).where(SecurityToken.user_id == user.id)
+        result = await db.execute(statement)
+        await db.commit()
+        return result.rowcount
+
 
 
 token_manager: TokenManager = TokenManager()
