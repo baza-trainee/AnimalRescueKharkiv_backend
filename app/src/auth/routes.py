@@ -158,7 +158,7 @@ async def login(
         value=refresh_token,
         httponly=True,
         secure=True,
-        samesite="Strict",
+        samesite="None",
         path="/auth",
     )
 
