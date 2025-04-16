@@ -12,9 +12,6 @@ from src.configuration.settings import settings
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
-INVITATION_EXPIRE = settings.invitation_token_expire_days
-RESET_PASS_EXPIRE = settings.reset_password_expire_mins
-
 
 class EmailService:
     class EmailTemplate(Enum):
