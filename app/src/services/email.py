@@ -12,6 +12,7 @@ from src.configuration.settings import settings
 
 logger = logging.getLogger(uvicorn.logging.__name__)
 
+
 class EmailService:
     class EmailTemplate(Enum):
         INVITATION = 1
@@ -33,16 +34,21 @@ class EmailService:
         TEMPLATE_FOLDER=Path(__file__).parent / "templates",
     )
 
+
     __templates: ClassVar[Dict[EmailTemplate, Dict[str, str]]] = {
         EmailTemplate.INVITATION: {"name": "invitation_email",
                                    "sub_EN": "Invitation to The Animal Rescue Kharkiv",
-                                   "sub_UA": "Запрошення до Animal Rescue Kharkiv"},
+                                   "sub_UA": "Запрошення до Animal Rescue Kharkiv",
+                                   "exp_EN": "This link is valid for <b>%s days</b>",
+                                   "exp_UA": "Це посилання є дійсним протягом <b>%s днів</b>"},
         EmailTemplate.WELCOME: {"name": "welcome_email",
                                 "sub_EN": "Welcome to The Animal Rescue Kharkiv",
                                 "sub_UA": "Вітаємо у Команді Animal Rescue Kharkiv"},
         EmailTemplate.RESET_PASS: {"name": "reset_pass_email",
                                    "sub_EN": "Password Reset on The Animal Rescue Kharkiv",
-                                   "sub_UA": "Відновлення Паролю на Animal Rescue Kharkiv"},
+                                   "sub_UA": "Відновлення Паролю на Animal Rescue Kharkiv",
+                                   "exp_EN": "This link is valid for <b>%s minutes</b>",
+                                   "exp_UA": "Це посилання є дійсним протягом <b>%s хвилин</b>"},
         EmailTemplate.PASS_CHANGED: {"name": "pass_changed_email",
                                      "sub_EN": "Password Reset Complited on The Animal Rescue Kharkiv",
                                      "sub_UA": "Успішна Зміна Паролю на Animal Rescue Kharkiv"},
@@ -60,10 +66,13 @@ class EmailService:
         try:
             template = self.__templates[template_name]
             subject = template[f"sub_{language.upper()}"]
+            expiration = template[f"exp_{language.upper()}"]
             template_body["subject"] = subject
 
             if token:
                 template_body["token"] = token
+
+            template_body["link_expiration"] = expiration % template_body["exp_value"]
 
             message = MessageSchema(
                 subject=subject,

@@ -55,7 +55,8 @@ async def invite_user(
         if not existing_role:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=RETURN_MSG.role_not_found)
         title = existing_role.title or existing_role.name
-        template_body = {"url": settings.url_register, "role": title.capitalize()}
+        invitation_expire = settings.invitation_token_expire_days
+        template_body = {"url": settings.url_register, "role": title.capitalize(), "exp_value": invitation_expire}
         token = await auth_service.create_email_token(
             data={"sub": body.email, "domain": domain, "role": existing_role.name},
             token_type=TokenType.invitation,
@@ -218,7 +219,11 @@ async def forgot_pasword(
         user = await users_repository.read_user(model=user_model, db=db)
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=RETURN_MSG.email_invalid)
-        template_body = {"url": settings.url_reset_pwd, "first_name": user.first_name, "last_name": user.last_name}
+        reset_pass_expire = settings.reset_password_expire_mins
+        template_body = {"url": settings.url_reset_pwd,
+                         "first_name": user.first_name,
+                         "last_name": user.last_name,
+                         "exp_value": reset_pass_expire}
         hashed_password = str(user.password.hash)
         token = await auth_service.create_email_token(
             data={"sub": email, "domain": domain, "key": hashed_password},
