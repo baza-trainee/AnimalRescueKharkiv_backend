@@ -22,7 +22,7 @@
             display: inline-block;
             padding: 10px 20px;
             color: #ffffff !important;
-            background-color: #007bff;
+            background-color: #4855CC;
             text-decoration: none;
             border-radius: 5px;
             text-align: center;
@@ -38,6 +38,9 @@
         <p style="text-align: center;">
             <a href="{{url}}?token={{token}}" class="button">Приєднатися</a>
         </p>
+        {% if link_expiration %}
+        <p><b>Примітка:</b> {{link_expiration}}.</p>
+        {% endif %}
         <p>Якщо Ви не робили запит на реєстрацію, просто проігноруйте це повідомлення.</p>
         <p>З повагою,<br>Команда Animal Rescue Kharkiv.</p>
     </div>
