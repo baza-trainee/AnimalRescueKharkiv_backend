@@ -22,7 +22,7 @@
             display: inline-block;
             padding: 10px 20px;
             color: #ffffff !important;
-            background-color: #007bff;
+            background-color: #4855CC;
             text-decoration: none;
             border-radius: 5px;
             text-align: center;
@@ -38,6 +38,9 @@
         <p style="text-align: center;">
             <a href="{{url}}?token={{token}}" class="button">Join Now</a>
         </p>
+        {% if link_expiration %}
+        <p><b>Note:</b> {{link_expiration}}.</p>
+        {% endif %}
         <p>If you have not requested registration, simply ignore this email.</p>
         <p>Best regards,<br>The Animal Rescue Kharkiv Team.</p>
     </div>
