@@ -89,13 +89,16 @@ class Animal(Base):
                                                              order_by="desc(AnimalLocation.date_from)")
     vaccinations: Mapped[List["Vaccination"]] = relationship("Vaccination",
                                                              cascade="all, delete-orphan",
-                                                             lazy="joined")
+                                                             lazy="joined",
+                                                             order_by="desc(Vaccination.date)")
     diagnoses: Mapped[List["Diagnosis"]] = relationship("Diagnosis",
                                                         cascade="all, delete-orphan",
-                                                        lazy="joined")
+                                                        lazy="joined",
+                                                        order_by="desc(Diagnosis.date)")
     procedures: Mapped[List["Procedure"]] = relationship("Procedure",
                                                          cascade="all, delete-orphan",
-                                                         lazy="joined")
+                                                         lazy="joined",
+                                                         order_by="desc(Procedure.date)")
 
     @hybrid_property
     def current_location(self) -> DeclarativeBase:
