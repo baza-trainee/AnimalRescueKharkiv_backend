@@ -90,23 +90,23 @@ class Animal(Base):
     created_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[created_by_id])
 
     media: Mapped[List[MediaAsset]] = relationship(secondary="crm_animal_media",
-                                                   lazy="joined")
+                                                   lazy="selectin")
     locations: Mapped[List["AnimalLocation"]] = relationship("AnimalLocation",
                                                              back_populates="animal",
                                                              cascade="all, delete-orphan",
-                                                             lazy="joined",
+                                                             lazy="selectin",
                                                              order_by="desc(AnimalLocation.date_from)")
     vaccinations: Mapped[List["Vaccination"]] = relationship("Vaccination",
                                                              cascade="all, delete-orphan",
-                                                             lazy="joined",
+                                                             lazy="selectin",
                                                              order_by="desc(Vaccination.date)")
     diagnoses: Mapped[List["Diagnosis"]] = relationship("Diagnosis",
                                                         cascade="all, delete-orphan",
-                                                        lazy="joined",
+                                                        lazy="selectin",
                                                         order_by="desc(Diagnosis.date)")
     procedures: Mapped[List["Procedure"]] = relationship("Procedure",
                                                          cascade="all, delete-orphan",
-                                                         lazy="joined",
+                                                         lazy="selectin",
                                                          order_by="desc(Procedure.date)")
 
     @hybrid_property
@@ -148,7 +148,7 @@ class AnimalLocation(Base):
     animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="locations",
-                                            lazy="joined")
+                                            lazy="selectin")
     location_id: Mapped[int] = mapped_column(ForeignKey(Location.id), index=True, nullable=False)
     location: Mapped["Location"] = relationship("Location", lazy="joined")
     date_from: Mapped[Date] = mapped_column(Date, index=False, nullable=False)
@@ -168,7 +168,7 @@ class Vaccination(Base):
     animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="vaccinations",
-                                            lazy="joined")
+                                            lazy="selectin")
     is_vaccinated: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     vaccine_type: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=True, nullable=True)
@@ -181,7 +181,7 @@ class Diagnosis(Base):
     animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="diagnoses",
-                                            lazy="joined")
+                                            lazy="selectin")
     name: Mapped[str] = mapped_column(String(200), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)
@@ -193,7 +193,7 @@ class Procedure(Base):
     animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="procedures",
-                                            lazy="joined")
+                                            lazy="selectin")
     name: Mapped[str] = mapped_column(String(200), index=False, nullable=True)
     date: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
     comment: Mapped[str] = mapped_column(String(500), index=False, nullable=True)

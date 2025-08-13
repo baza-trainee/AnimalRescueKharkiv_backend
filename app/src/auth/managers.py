@@ -5,6 +5,7 @@ import uvicorn
 from sqlalchemy import delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 from src.auth.models import SecurityToken, TokenType
 from src.configuration.db import SessionLocal
 from src.singleton import SingletonMeta
@@ -37,10 +38,19 @@ class TokenManager(metaclass=SingletonMeta):
             db: AsyncSession,
     ) -> SecurityToken | None:
         """Reads a security token from database. Returns the retrieved security token"""
-        statement = select(SecurityToken)
-        statement = statement.filter_by(token=token, token_type=token_type)
-        statement = statement.order_by(desc(SecurityToken.created_at))
-        statement = statement.limit(1)
+        id_query = select(SecurityToken.id)
+        id_query = id_query.filter_by(token=token, token_type=token_type)
+        id_query = id_query.order_by(desc(SecurityToken.created_at))
+        id_query = id_query.limit(1)
+        id_result = (await db.execute(id_query)).scalar_one_or_none()
+
+        if not id_result:
+            return None
+
+        statement = (select(SecurityToken)
+                     .where(SecurityToken.id == id_result)
+                     .options(joinedload(SecurityToken.user))
+        )
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
 
@@ -50,8 +60,10 @@ class TokenManager(metaclass=SingletonMeta):
             db: AsyncSession,
     ) -> SecurityToken | None:
         """Reads a security token by id from database. Returns the retrieved security token"""
-        statement = select(SecurityToken)
-        statement = statement.filter_by(id=token_id)
+        statement = (select(SecurityToken)
+                     .where(SecurityToken.id == token_id)
+                     .options(joinedload(SecurityToken.user))
+        )
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
 

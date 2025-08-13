@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Awaitable, Callable, List, Optional, Type
 from uuid import UUID
@@ -104,6 +105,7 @@ async def read_animals( query: str  | None = Query(default=None,
     animals: List[AnimalResponse] = await animals_router_cache.get(key=cache_key)
     if not animals:
         try:
+            start = time.perf_counter()
             animals = await animals_repository.read_animals(
                 query=query,
                 arrival_date=arrival_date,
@@ -122,6 +124,8 @@ async def read_animals( query: str  | None = Query(default=None,
                 limit=limit,
                 sort=sorting.sort,
                 db=db)
+            end = time.perf_counter()
+            logger.debug(f"animals_repository.read_animals - elapsed time {end - start} seconds.")
             animals = [AnimalResponse.model_validate(animal) for animal in animals]
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=jsonable_encoder(e.args))
