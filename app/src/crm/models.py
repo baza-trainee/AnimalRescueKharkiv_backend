@@ -39,7 +39,10 @@ class Animal(Base):
     origin__city: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     origin__address: Mapped[str] = mapped_column(String(100), index=False, nullable=True)
 
-    general__animal_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("crm_animal_types.id"), nullable=True)
+    general__animal_type_id: Mapped[int] = mapped_column(Integer,
+                                                         ForeignKey("crm_animal_types.id"),
+                                                         index=True,
+                                                         nullable=True)
     general__animal_type: Mapped["AnimalType"] = relationship("AnimalType", lazy="joined")
     general__gender: Mapped[enum.Enum] = mapped_column(Enum(Gender), default=Gender.male)
     general__weight: Mapped[float] = mapped_column(Float, index=False, nullable=True)
@@ -71,13 +74,19 @@ class Animal(Base):
                                                  default=func.now(),
                                                  onupdate=func.now(),
                                                  index=True)
-    updated_by_id: Mapped[UUID | None] = mapped_column(UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_by_id: Mapped[UUID | None] = mapped_column(UUID,
+                                                       ForeignKey("users.id", ondelete="SET NULL"),
+                                                       index=True,
+                                                       nullable=True)
     updated_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[updated_by_id])
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True),
                                                  default=func.now(),
                                                  index=True)
-    created_by_id: Mapped[UUID | None] = mapped_column(UUID, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by_id: Mapped[UUID | None] = mapped_column(UUID,
+                                                       ForeignKey("users.id", ondelete="SET NULL"),
+                                                       index=True,
+                                                       nullable=True)
     created_by: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[created_by_id])
 
     media: Mapped[List[MediaAsset]] = relationship(secondary="crm_animal_media",
@@ -136,11 +145,11 @@ class Location(Base):
 class AnimalLocation(Base):
     __tablename__ = "crm_animal_locations"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="locations",
                                             lazy="joined")
-    location_id: Mapped[int] = mapped_column(ForeignKey(Location.id), nullable=False)
+    location_id: Mapped[int] = mapped_column(ForeignKey(Location.id), index=True, nullable=False)
     location: Mapped["Location"] = relationship("Location", lazy="joined")
     date_from: Mapped[Date] = mapped_column(Date, index=False, nullable=False)
     date_to: Mapped[Date] = mapped_column(Date, index=False, nullable=True)
@@ -149,14 +158,14 @@ class AnimalLocation(Base):
 class AnimalMedia(Base):
     __tablename__ = "crm_animal_media"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
-    media_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id), nullable=True)
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
+    media_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id), index=True, nullable=True)
 
 
 class Vaccination(Base):
     __tablename__ = "crm_vaccinations"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="vaccinations",
                                             lazy="joined")
@@ -169,7 +178,7 @@ class Vaccination(Base):
 class Diagnosis(Base):
     __tablename__ = "crm_diagnoses"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="diagnoses",
                                             lazy="joined")
@@ -181,7 +190,7 @@ class Diagnosis(Base):
 class Procedure(Base):
     __tablename__ = "crm_procedures"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal",
                                             back_populates="procedures",
                                             lazy="joined")
@@ -192,9 +201,9 @@ class Procedure(Base):
 class EditingLock(Base):
     __tablename__ = "crm_editing_locks"
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
-    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), nullable=False)
-    animal: Mapped["Animal"] = relationship("Animal", lazy="joined")
-    user_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("users.id"), nullable=False)
-    user: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[user_id])
+    animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
+    animal: Mapped["Animal"] = relationship("Animal", lazy="select")
+    user_id: Mapped[UUID] = mapped_column(UUID, ForeignKey("users.id"), index=True, nullable=False)
+    user: Mapped["User"] = relationship("User", lazy="select", foreign_keys=[user_id])
     section_name: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now(), index=True)

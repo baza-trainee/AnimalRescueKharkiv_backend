@@ -19,8 +19,10 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(String(30), index=False, nullable=True)
     last_name: Mapped[str] = mapped_column(String(50), index=False, nullable=True)
     phone: Mapped[str] = mapped_column(String(30), index=False, unique=True, nullable=True)
-    photo_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id, ondelete="SET NULL"), nullable=True)
+    photo_id: Mapped[MediaAsset] = mapped_column(ForeignKey(MediaAsset.id, ondelete="SET NULL"),
+                                                 index=True,
+                                                 nullable=True)
     photo: Mapped[MediaAsset] = relationship(MediaAsset, lazy="joined")
-    role_id: Mapped[Role] = mapped_column(ForeignKey(Role.id, ondelete="SET NULL"), nullable=True)
+    role_id: Mapped[Role] = mapped_column(ForeignKey(Role.id, ondelete="SET NULL"), index=True, nullable=True)
     role: Mapped[Role] = relationship(Role, back_populates="users", lazy="joined")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now(), index=True)

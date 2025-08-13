@@ -21,5 +21,5 @@ class SecurityToken(Base):
     token_type = Column("token_type", Enum(TokenType), default=TokenType.access)
     created_at = Column("created_at", DateTime(timezone=True), default=func.now(), index=True)
     expire_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    user_id: Mapped[User] = mapped_column(ForeignKey(User.id, ondelete="cascade"), nullable=True)
+    user_id: Mapped[User] = mapped_column(ForeignKey(User.id, ondelete="cascade"), index=True, nullable=True)
     user: Mapped[User] = relationship(User, lazy="joined")
