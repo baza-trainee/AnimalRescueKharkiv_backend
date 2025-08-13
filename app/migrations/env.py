@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from src import *  # noqa: F403
 from src.configuration.db import SQLALCHEMY_DATABASE_URL, Base
 from utils import import_models_from_src
+from init_model import InitData
 
 
 import_models_from_src()

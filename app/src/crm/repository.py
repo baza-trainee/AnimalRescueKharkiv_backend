@@ -10,7 +10,7 @@ from sqlalchemy import Select, and_, any_, asc, desc, func, or_
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import DeclarativeBase, selectinload
+from sqlalchemy.orm import DeclarativeBase, joinedload, selectinload
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from src.configuration.settings import settings
 from src.crm.models import (
@@ -197,7 +197,16 @@ class AnimalsRepository(metaclass=SingletonMeta):
 
     async def read_animal(self, animal_id: int, db: AsyncSession) -> Animal | None:
         """Reads an animal by id. Returns the retrieved animal"""
-        statement = select(Animal)
+        statement = select(Animal).options(
+                joinedload(Animal.general__animal_type),
+                joinedload(Animal.created_by),
+                joinedload(Animal.updated_by),
+                selectinload(Animal.media),
+                selectinload(Animal.locations),
+                selectinload(Animal.vaccinations),
+                selectinload(Animal.diagnoses),
+                selectinload(Animal.procedures),
+            )
         statement = statement.filter_by(id=animal_id)
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
@@ -248,44 +257,73 @@ class AnimalsRepository(metaclass=SingletonMeta):
                             limit: int = 20,
                             sort: str | None = "created_at|desc") -> List[Animal]:
         """Reads animals with optional filtering. Returns the retrieved animals"""
-        statement = select(Animal)
+        id_query = select(Animal.id)
+
         if query is not None:
-            condition: ColumnElement[bool] | None = self.__get_name_id_condition(query=query)
+            condition = self.__get_name_id_condition(query=query)
             if condition is not None:
-                statement = statement.filter(condition)
-        statement = self.__filter(statement, arrival_date, lambda x: Animal.origin__arrival_date == x)
-        statement = self.__filter(statement, city, lambda x: func.lower(Animal.origin__city) == x)
-        statement = self.__filter(statement, animal_types, lambda x: Animal.general__animal_type_id.in_(x))
-        statement = self.__filter(statement, gender, lambda x: Animal.general__gender == x)
-        statement = self.__filter(statement, current_locations,
-                                  lambda x: Animal.current_location_id.in_(x))
+                id_query = id_query.filter(condition)
+
+        id_query = self.__filter(id_query, arrival_date, lambda x: Animal.origin__arrival_date == x)
+        id_query = self.__filter(id_query, city, lambda x: func.lower(Animal.origin__city) == x)
+        id_query = self.__filter(id_query, animal_types, lambda x: Animal.general__animal_type_id.in_(x))
+        id_query = self.__filter(id_query, gender, lambda x: Animal.general__gender == x)
+        id_query = self.__filter(id_query, current_locations, lambda x: Animal.current_location_id.in_(x))
+
         if animal_state is not None:
             match animal_state:
                 case AnimalState.active:
-                    statement = statement.filter(and_(Animal.death__dead == False, #noqa: E712
-                                                      Animal.adoption__date == None)) #noqa: E711
+                    id_query = id_query.filter(and_(
+                        Animal.death__dead == False,  # noqa: E712
+                        Animal.adoption__date == None,  # noqa: E711
+                    ))
                 case AnimalState.dead:
-                    statement = statement.filter(Animal.death__dead == True) #noqa: E712
+                    id_query = id_query.filter(Animal.death__dead == True)  # noqa: E712
                 case AnimalState.adopted:
-                    statement = statement.filter(Animal.adoption__date != None) #noqa: E711
-        statement = self.__filter(statement, is_microchpped, lambda x: Animal.microchipping__done == x)
-        statement = self.__filter(statement, microchpping_date, lambda x: Animal.microchipping__date == x)
-        statement = self.__filter(statement, is_sterilized, lambda x: Animal.sterilization__done == x)
-        statement = self.__filter(statement, sterilization_date, lambda x: Animal.sterilization__date == x)
+                    id_query = id_query.filter(Animal.adoption__date != None)  # noqa: E711
+
+        id_query = self.__filter(id_query, is_microchpped, lambda x: Animal.microchipping__done == x)
+        id_query = self.__filter(id_query, microchpping_date, lambda x: Animal.microchipping__date == x)
+        id_query = self.__filter(id_query, is_sterilized, lambda x: Animal.sterilization__done == x)
+        id_query = self.__filter(id_query, sterilization_date, lambda x: Animal.sterilization__date == x)
+
         if is_vaccinated is not None:
-            expression: ColumnElement[bool] = Animal.vaccinations.any(Vaccination.is_vaccinated == is_vaccinated)
+            expression = Animal.vaccinations.any(Vaccination.is_vaccinated == is_vaccinated)
             if not is_vaccinated:
                 expression = or_(expression, ~Animal.vaccinations.any())
-            statement = statement.filter(expression)
-        statement = self.__filter(statement, vaccination_date,
-                                  lambda x: Animal.vaccinations.any(Vaccination.date == x))
-        statement = statement.offset(skip).limit(limit)
+            id_query = id_query.filter(expression)
+
+        id_query = self.__filter(id_query, vaccination_date,
+                                lambda x: Animal.vaccinations.any(Vaccination.date == x))
+
         if sort:
-            statement = statement.order_by(
-                 get_sql_order_expression(sort=sort, model_type=Animal, default_dorting=desc(Animal.created_at)))
-        result = await db.execute(statement)
-        animals = result.unique().scalars().all()
-        return list(animals)
+            id_query = id_query.order_by(
+                get_sql_order_expression(sort=sort, model_type=Animal, default_dorting=desc(Animal.created_at)),
+            )
+
+        id_query = id_query.offset(skip).limit(limit)
+        ids = (await db.execute(id_query)).scalars().all()
+
+        if not ids:
+            return []
+
+        stmt = (
+            select(Animal)
+            .where(Animal.id.in_(ids))
+            .options(
+                joinedload(Animal.general__animal_type),
+                joinedload(Animal.created_by),
+                joinedload(Animal.updated_by),
+                selectinload(Animal.media),
+                selectinload(Animal.locations),
+                selectinload(Animal.vaccinations),
+                selectinload(Animal.diagnoses),
+                selectinload(Animal.procedures),
+            )
+        )
+
+        animals = await db.execute(stmt)
+        return animals.unique().scalars().all()
 
     async def read_animal_type(self, animal_type_id: int, db: AsyncSession) -> AnimalType | None:
         """Reads an animal type by id. Returns the retrieved animal type"""
