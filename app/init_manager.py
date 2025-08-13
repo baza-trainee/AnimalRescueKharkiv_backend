@@ -1,10 +1,14 @@
 import functools
 import json
 import logging
+import os
+from hashlib import sha256
 from pathlib import Path
 from typing import Callable, ClassVar
 
 import uvicorn
+from init_model import InitData
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.configuration.settings import settings
 from src.crm.repository import animals_repository
@@ -164,5 +168,29 @@ class DataInitializer(AutoInitializer):
     async def run(self) -> None:
         """Executes the data initialization process"""
         logger.info(f"{self.__class__.__name__} started")
-        await self.__run_initializers()
+        statement = select(InitData).where(InitData.id == 1)
+        init_data = (await self.db.execute(statement)).scalar_one_or_none()
+        new_hash = self.__calculate_combined_checksum(self.base_path)
+        if not init_data:
+           init_data = InitData()
+
+        if not init_data.data_hash or new_hash != init_data.data_hash:
+           init_data.data_hash = new_hash
+           self.db.add(init_data)
+           await self.db.commit()
+           await self.__run_initializers()
+        else:
+            logger.info(f"{self.__class__.__name__} no changes to initialize")
         logger.info(f"{self.__class__.__name__} completed")
+
+    def __calculate_combined_checksum(self, directory_path: Path) -> str:
+        hasher = sha256()
+
+        file_paths = sorted(f for f in directory_path.iterdir() if f.is_file() and f.suffix.lower() == ".json")
+
+        for file_path in file_paths:
+            with file_path.open("rb") as f:
+                while chunk := f.read(8192):
+                    hasher.update(chunk)
+
+        return hasher.hexdigest()
