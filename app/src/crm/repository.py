@@ -1,6 +1,5 @@
 import logging
 import re
-import time
 import uuid
 from datetime import date
 from typing import Any, Callable, List, Tuple, TypeVar
@@ -258,8 +257,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
                             limit: int = 20,
                             sort: str | None = "created_at|desc") -> List[Animal]:
         """Reads animals with optional filtering. Returns the retrieved animals"""
-        start = time.perf_counter()
-        logger.debug("read_animals - start building query")
         id_query = select(Animal.id)
 
         if query is not None:
@@ -305,16 +302,11 @@ class AnimalsRepository(metaclass=SingletonMeta):
             )
 
         id_query = id_query.offset(skip).limit(limit)
-        logger.debug(f"read_animals - start IDs query, elapsed {time.perf_counter() - start} seconds")
-        start = time.perf_counter()
         ids = (await db.execute(id_query)).scalars().all()
-        logger.debug(f"read_animals - IDs query elapsed {time.perf_counter() - start} seconds")
 
         if not ids:
             return []
 
-        logger.debug("read_animals - start FULL query")
-        start = time.perf_counter()
         stmt = (
             select(Animal)
             .where(Animal.id.in_(ids))
@@ -331,12 +323,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
         )
 
         animals = await db.execute(stmt)
-        logger.debug(f"read_animals - FULL query elapsed {time.perf_counter() - start} seconds")
-        logger.debug("read_animals - start getting scalars")
-        start = time.perf_counter()
-        result = animals.unique().scalars().all()
-        logger.debug(f"read_animals - getting scalars elapsed {time.perf_counter() - start} seconds")
-        return result
+        return animals.unique().scalars().all()
 
     async def read_animal_type(self, animal_type_id: int, db: AsyncSession) -> AnimalType | None:
         """Reads an animal type by id. Returns the retrieved animal type"""
