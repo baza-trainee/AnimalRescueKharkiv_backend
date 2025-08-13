@@ -10,7 +10,7 @@ from sqlalchemy import Select, and_, any_, asc, desc, func, or_
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, selectinload
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from src.configuration.settings import settings
 from src.crm.models import (
@@ -56,7 +56,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
         location = Location(name=model.name)
         db.add(location)
         await db.commit()
-        await db.refresh(location)
         return location
 
     async def create_animal_type(self, model: AnimalTypeBase, db: AsyncSession) -> AnimalType:
@@ -343,7 +342,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.updated_by = user
             db.add(model)
             await db.commit()
-            await db.refresh(model)
         return model
 
     async def update_animal_location(self,
@@ -364,7 +362,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
-            await db.refresh(model)
         return model.animal
 
     async def update_vaccination(self,
@@ -387,7 +384,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
-            await db.refresh(model)
         return model.animal
 
     async def update_procedure(self,
@@ -408,7 +404,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
-            await db.refresh(model)
         return model.animal
 
     async def update_diagnosis(self,
@@ -429,7 +424,6 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
-            await db.refresh(model)
         return model.animal
 
     async def read_editing_lock(self,
@@ -438,10 +432,10 @@ class AnimalsRepository(metaclass=SingletonMeta):
                                 db: AsyncSession,
                                ) -> EditingLock | None:
         """Reads an editing lock by animal id and section name. Returns the retrieved lock record"""
-        statement = select(EditingLock)
+        statement = select(EditingLock).options(selectinload(EditingLock.user))
         statement = statement.filter_by(animal_id=animal_id, section_name=section_name)
         result = await db.execute(statement)
-        return result.unique().scalar_one_or_none()
+        return result.scalar_one_or_none()
 
     async def create_editing_lock(self,
                                 animal_id: int,
@@ -450,13 +444,11 @@ class AnimalsRepository(metaclass=SingletonMeta):
                                 db: AsyncSession,
                               ) -> EditingLock:
         """Creates an editing lock by animal id and section name for the user. Returns the created lock record"""
-        user = await db.merge(user)
         editing_lock = EditingLock(animal_id=animal_id,
-                                  user=user,
+                                  user_id=user.id,
                                   section_name=section_name)
         db.add(editing_lock)
         await db.commit()
-        await db.refresh(editing_lock)
         return editing_lock
 
     async def delete_editing_lock(self,

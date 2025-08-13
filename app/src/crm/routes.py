@@ -445,17 +445,20 @@ async def acquire_lock(animal_id: int,
                              ) -> EditingLockResponse:
     """Acquires lock on section for context user. Returns the acquired lock"""
     try:
+        animal: Animal = await animals_repository.read_animal(animal_id=animal_id, db=db)
+        if not animal:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=RETURN_MSG.crm_animal_not_found)
         editing_lock = await animals_repository.read_editing_lock(animal_id=animal_id,
                                                               section_name=section_name,
                                                               db=db)
         exprire_delta:timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
         if editing_lock:
-            if (editing_lock.user.id != current_user.id
+            if (editing_lock.user_id != current_user.id
                     and editing_lock.created_at + exprire_delta >= datetime.now(timezone.utc).astimezone()):
                 logger.info(editing_lock.__dict__)
                 details: str = EditingLockResponse.model_validate(editing_lock).model_dump_json()
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
-            if (editing_lock.user.id == current_user.id
+            if (editing_lock.user_id == current_user.id
                     and editing_lock.created_at + exprire_delta >= datetime.now(timezone.utc).astimezone()):
                 return editing_lock
             await animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
@@ -470,7 +473,9 @@ async def acquire_lock(animal_id: int,
         logger.exception("An error occured:\n")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=RETURN_MSG.crm_acquire_lock_failed % (section_name, current_user.email))
-    return editing_lock
+    return EditingLockResponse(animal_id=editing_lock.animal_id,
+                               user=current_user,
+                               section_name=editing_lock.section_name)
 
 @router.delete(settings.animals_prefix + "/{animal_id}/{section_name}/lock", status_code=status.HTTP_204_NO_CONTENT,
             description=settings.rate_limiter_description,
