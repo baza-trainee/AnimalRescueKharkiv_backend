@@ -471,6 +471,8 @@ async def acquire_lock(animal_id: int,
                                                                     section_name=section_name,
                                                                     user=current_user,
                                                                     db=db)
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
     except HTTPException:
         raise
     except Exception:
