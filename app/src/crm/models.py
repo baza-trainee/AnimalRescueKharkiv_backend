@@ -200,6 +200,9 @@ class Procedure(Base):
 
 class EditingLock(Base):
     __tablename__ = "crm_editing_locks"
+    __table_args__ = (
+        UniqueConstraint("animal_id", "section_name", name="anmial_section_unique"),
+    )
     id: Mapped[UUID] = mapped_column(UUID, primary_key=True, default=uuid4)
     animal_id: Mapped[int] = mapped_column(Integer, ForeignKey(Animal.id), index=True, nullable=False)
     animal: Mapped["Animal"] = relationship("Animal", lazy="select")
