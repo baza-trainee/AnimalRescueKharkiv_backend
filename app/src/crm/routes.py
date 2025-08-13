@@ -387,11 +387,11 @@ async def update_animal_section(animal_id: int,
                                                                 db=db)
         exprire_delta: timedelta = timedelta(minutes=settings.crm_editing_lock_expire_minutes)
         if (not editing_lock
-            or (editing_lock.user.id != current_user.id
+            or (editing_lock.user_id != current_user.id
                 and editing_lock.created_at + exprire_delta < datetime.now(timezone.utc).astimezone())):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail=RETURN_MSG.crm_lock_not_found % (section_name, current_user.email))
-        if editing_lock.user.id != current_user.id:
+        if editing_lock.user_id != current_user.id:
             details: str = EditingLockResponse.model_validate(editing_lock).model_dump_json()
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=details)
         await animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
@@ -409,7 +409,7 @@ async def update_animal_section(animal_id: int,
                 await animals_router_cache.invalidate_key(key=cache_key)
                 await animals_router_cache.invalidate_all_keys()
                 await stats_router_cache.invalidate_all_keys()
-        animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
+        await animals_repository.delete_editing_lock(editing_lock=editing_lock, db=db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=jsonable_encoder(e.args))
     except ValidationError as e:
