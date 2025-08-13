@@ -3,6 +3,7 @@ import logging
 import uvicorn
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from src.configuration.settings import settings
 from src.permissions.models import Permission
 from src.roles.models import Role
@@ -26,18 +27,32 @@ class RolesRepository (metaclass=SingletonMeta):
 
     async def read_role(self, model: RoleBase, db: AsyncSession) -> Role | None:
         """Reads a role by name and domain. Returns the retrieved role"""
-        statement = select(Role)
+        statement = select(Role).options(
+            selectinload(Role.permissions),
+        )
         statement = statement.filter_by(name=model.name.lower(), domain=model.domain.lower())
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
 
     async def read_roles(self, name:str, domain:str, db: AsyncSession) -> list[Role]:
         """Reads all roles with optional filtering. Returns the retrieved collection of roles"""
-        statement = select(Role)
+        id_query = select(Role.id)
         if name:
-            statement = statement.filter_by(name=name.lower())
+            id_query = id_query.filter_by(name=name.lower())
         if domain:
-            statement = statement.filter_by(domain=domain.lower())
+            id_query = id_query.filter_by(domain=domain.lower())
+        ids = (await db.execute(id_query)).scalars().all()
+
+        if not ids:
+            return []
+
+        statement = (
+            select(Role)
+            .where(Role.id.in_(ids))
+            .options(
+                selectinload(Role.permissions),
+            )
+        )
         result = await db.execute(statement)
         roles = result.unique().scalars().all()
         return list(roles)
