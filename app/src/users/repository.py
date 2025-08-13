@@ -7,6 +7,7 @@ from pydantic import UUID4
 from sqlalchemy import any_, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import ColumnElement, ColumnExpressionArgument
 from src.exceptions.exceptions import RETURN_MSG
 from src.media.models import MediaAsset
@@ -36,20 +37,38 @@ class UsersRepository(metaclass=SingletonMeta):
 
     async def read_user(self, model: UserBase, db: AsyncSession) -> User | None:
         """Reads a user by email and domain. Returns the retrieved user"""
-        statement = select(User).filter_by(
-            email=model.email.lower(),
-            domain=model.domain.lower(),
+        statement = (select(User)
+                     .options(joinedload(User.role),
+                              joinedload(User.photo))
+                     .filter_by(
+                        email=model.email.lower(),
+                        domain=model.domain.lower(),
+                    )
         )
         result = await db.execute(statement)
         return result.unique().scalar_one_or_none()
 
     async def read_users(self, email: str, domain: str, db: AsyncSession) -> list[User]:
         """Reads all users with optional filtering. Returns the retrieved user collection"""
-        statement = select(User)
+        id_query = select(User.id)
         if email:
-            statement = statement.filter_by(email=email.lower())
+            id_query = id_query.filter_by(email=email.lower())
         if domain:
-            statement = statement.filter_by(domain=domain.lower())
+            id_query = id_query.filter_by(domain=domain.lower())
+        ids = (await db.execute(id_query)).scalars().all()
+
+        if not ids:
+            return []
+
+        statement = (
+            select(User)
+            .where(User.id.in_(ids))
+            .options(
+                joinedload(User.role),
+                joinedload(User.photo),
+            )
+        )
+
         result = await db.execute(statement)
         users = result.unique().scalars().all()
         return list(users)
@@ -73,17 +92,31 @@ class UsersRepository(metaclass=SingletonMeta):
                            db: AsyncSession,
                           ) -> list[User]:
         """Searches all users by terms. Returns the retrieved user collection"""
-        statement = select(User)
+        id_query = select(User.id)
         if domain:
-            statement = statement.filter_by(domain=domain.lower())
+            id_query = id_query.filter_by(domain=domain.lower())
         if roles:
-            statement = statement.filter(User.role_id.in_(roles))
+            id_query = id_query.filter(User.role_id.in_(roles))
         condition: ColumnElement[bool] | None = self.__get_search_conditions(*terms)
         if condition is not None:
-            statement = statement.filter(condition)
+            id_query = id_query.filter(condition)
         if sort:
-            statement = statement.order_by(
+            id_query = id_query.order_by(
                 get_sql_order_expression(sort=sort, model_type=User, default_dorting=desc(User.created_at)))
+        ids = (await db.execute(id_query)).scalars().all()
+
+        if not ids:
+            return []
+
+        statement = (
+            select(User)
+            .where(User.id.in_(ids))
+            .options(
+                joinedload(User.role),
+                joinedload(User.photo),
+            )
+        )
+
         result = await db.execute(statement)
         users = result.unique().scalars().all()
         return list(users)

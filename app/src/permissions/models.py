@@ -18,9 +18,6 @@ class Permission(Base):
     entity: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     operation: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(100), nullable=True, index=False)
-    roles: Mapped[list["Role"]] = relationship(secondary="roles_permissions",
-                                                           back_populates="permissions",
-                                                           lazy="joined")
 
     def __str__(self) -> str:
         """Returns string representation for the permission"""

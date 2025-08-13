@@ -24,5 +24,5 @@ class User(Base):
                                                  nullable=True)
     photo: Mapped[MediaAsset] = relationship(MediaAsset, lazy="joined")
     role_id: Mapped[Role] = mapped_column(ForeignKey(Role.id, ondelete="SET NULL"), index=True, nullable=True)
-    role: Mapped[Role] = relationship(Role, back_populates="users", lazy="joined")
+    role: Mapped[Role] = relationship(Role, lazy="joined")
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), default=func.now(), index=True)
