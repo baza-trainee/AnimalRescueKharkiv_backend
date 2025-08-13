@@ -342,6 +342,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.updated_by = user
             db.add(model)
             await db.commit()
+            await db.refresh(model)
         return model
 
     async def update_animal_location(self,
@@ -362,6 +363,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
+            await db.refresh(model)
         return model.animal
 
     async def update_vaccination(self,
@@ -384,6 +386,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
+            await db.refresh(model)
         return model.animal
 
     async def update_procedure(self,
@@ -404,6 +407,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
+            await db.refresh(model)
         return model.animal
 
     async def update_diagnosis(self,
@@ -424,6 +428,7 @@ class AnimalsRepository(metaclass=SingletonMeta):
             model.animal.updated_by = user
             db.add(model)
             await db.commit()
+            await db.refresh(model)
         return model.animal
 
     async def read_editing_lock(self,
