@@ -65,15 +65,15 @@ class DynamicSection(BaseModel):
 
     def __serialize_value(self, value: datetime|date|Decimal|str) -> datetime|float|str:
         if isinstance(value, (datetime, date)):
-            return value.strftime("%d/%m/%Y")
+            return value.isoformat()
         if isinstance(value, Decimal):
             return float(value)
         if isinstance(value, str):
             try:
                 parsed_value = parser.parse(value)
                 if parsed_value.hour or parsed_value.minute or parsed_value.second:
-                    return parsed_value.strftime("%d/%m/%Y %H:%M:%S")
-                return parsed_value.strftime("%d/%m/%Y")
+                    return parsed_value.isoformat(sep=" ")
+                return parsed_value.date().isoformat()
             except parser.ParserError:
                 pass
         return value
@@ -164,15 +164,15 @@ class DynamicResponse(BaseModel):
 
     def __serialize_value(self, value: datetime|date|Decimal|str) -> datetime|float|str:
         if isinstance(value, (datetime, date)):
-            return value.strftime("%d/%m/%Y")
+            return value.isoformat()
         if isinstance(value, Decimal):
             return float(value)
         if isinstance(value, str):
             try:
                 parsed_value = parser.parse(value)
                 if parsed_value.hour or parsed_value.minute or parsed_value.second:
-                    return parsed_value.strftime("%d/%m/%Y %H:%M:%S")
-                return parsed_value.strftime("%d/%m/%Y")
+                    return parsed_value.isoformat(sep=" ")
+                return parsed_value.isoformat()
             except parser.ParserError:
                 pass
         return value
